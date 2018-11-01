@@ -1,0 +1,60 @@
+version: 2
+
+golang-docker-base-image: &golang-docker-base-image
+  docker:
+    - image: circleci/golang:1.12.7
+      environment:
+        GO111MODULE: "on"
+        CGO_ENABLED: 0
+
+linter-image: &linter-image
+  docker:
+    - image: golangci/golangci-lint:v1.17
+
+jobs:
+  build:
+    <<: *golang-docker-base-image
+    steps:
+      - checkout
+      - run:
+          name: "Cross Compile to Mac and Linux"
+          command: |
+            mkdir -p bin
+            GOOS=linux go build -mod=vendor -ldflags="-X main.version=${CIRCLE_TAG}" -o bin/isopod-linux
+            GOOS=darwin go build -mod=vendor -ldflags="-X main.version=${CIRCLE_TAG}" -o bin/isopod-darwin
+      - persist_to_workspace:
+          root: . # Could be absolute or relative to working_directory
+          paths:
+            - bin
+
+  lint:
+    <<: *linter-image
+    steps:
+      - checkout
+      - run: golangci-lint run
+
+  unittest:
+    <<: *golang-docker-base-image
+    steps:
+      - checkout
+      # CGO_ENABLED=1 for race detection.
+      - run: CGO_ENABLED=1 go test -mod=vendor -timeout=20m -v -race -cpu=4 -cover -covermode=atomic ./... -args -v=1 -logtostderr
+
+  testdata:
+    <<: *golang-docker-base-image
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run: VAULT_TOKEN=not-used bin/isopod-linux test
+
+workflows:
+  version: 2
+  presubmit:
+    jobs:
+      - build
+      - unittest
+      - lint
+      - testdata:
+          requires:
+            - build

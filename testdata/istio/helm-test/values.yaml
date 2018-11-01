@@ -1,0 +1,5 @@
+pilot:
+  replicaCount: 1
+
+  image: pilot
+  traceSampling: 1.0

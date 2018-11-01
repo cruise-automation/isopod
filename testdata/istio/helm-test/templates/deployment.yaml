@@ -1,0 +1,59 @@
+# Some comments with yaml separator
+# This is to test yaml validation.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: istio-pilot
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: pilot
+    release: {{ .Release.Name }}
+    istio: pilot
+spec:
+{{- if .Values.pilot.replicaCount }}
+  replicas: {{ .Values.pilot.replicaCount }}
+{{- else }}
+  replicas: 1
+{{- end }}
+  selector:
+    matchLabels:
+      istio: pilot
+  template:
+    metadata:
+      labels:
+        app: pilot
+        istio: pilot
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      serviceAccountName: istio-pilot-service-account
+{{- if .Values.global.priorityClassName }}
+      priorityClassName: "{{ .Values.global.priorityClassName }}"
+{{- end }}
+      containers:
+        - name: discovery
+          image: "{{ .Values.pilot.image }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy | default "Always" }}
+          args:
+          - "discovery"
+          - --monitoringAddr=:15014
+          ports:
+          - containerPort: 8080
+          env:
+{{- if .Values.pilot.traceSampling }}
+          - name: PILOT_TRACE_SAMPLING
+            value: "{{ .Values.pilot.traceSampling }}"
+{{- end }}
+---
+apiVersion: "authentication.istio.io/v1alpha1"
+kind: "MeshPolicy"
+metadata:
+  name: "default"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    release: {{ .Release.Name }}
+spec:
+  peers:
+  - mtls:
+      mode: PERMISSIVE

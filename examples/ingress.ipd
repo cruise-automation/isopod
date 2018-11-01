@@ -1,0 +1,398 @@
+# vim: set syntax=python:
+
+# Copyright 2019 GM Cruise LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http:#www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+appsv1 = proto.package("k8s.io.api.apps.v1")
+corev1 = proto.package("k8s.io.api.core.v1")
+metav1 = proto.package("k8s.io.apimachinery.pkg.apis.meta.v1")
+rbacv1b1 = proto.package("k8s.io.api.rbac.v1beta1")
+policyv1b1 = proto.package("k8s.io.api.policy.v1beta1")
+intstr = proto.package("k8s.io.apimachinery.pkg.util.intstr")
+
+load("helpers.ipd", "env_from_secret", "container_port",
+     "health_probe", "env_from_field", "env", "rolling_update_dep")
+
+name_prefix = "internal-nginx-ingress"
+namespace = "ingress"
+
+
+def install(ctx):
+
+    metadata = metav1.ObjectMeta(
+        namespace=namespace,
+        labels={"app": "nginx-ingress"},
+    )
+
+    kube.put(
+        name=namespace,
+        data=[corev1.Namespace(metadata=metav1.ObjectMeta(name=namespace))],
+    )
+
+    tls = vault.read("secret/piedpiper.com")
+
+    kube.put(
+        name="piedpiper.com",
+        namespace=namespace,
+        data=[corev1.Secret(
+            metadata=metav1.ObjectMeta(name="piedpiper.com"),
+            type="kubernetes.io/tls",
+            data={
+                "ca.crt": tls["ca-bundle"],
+                "tls.crt": tls["crt"],
+                "tls.key": tls["key"],
+            },
+        )],
+    )
+
+    sa_name = name_prefix
+    kube.put(
+        name=sa_name,
+        namespace=namespace,
+        data=[corev1.ServiceAccount(metadata=metadata)],
+    )
+
+    kube.put(
+        name=name_prefix,
+        api_group="rbac.authorization.k8s.io",
+        data=[rbacv1b1.ClusterRole(
+            rules=[
+                rbacv1b1.PolicyRule(
+                    apiGroups=[""],
+                    resources=["configmaps", "endpoints",
+                               "nodes", "pods", "secrets"],
+                    verbs=["list", "watch"],
+                ),
+                rbacv1b1.PolicyRule(
+                    apiGroups=[""],
+                    resources=["nodes"],
+                    verbs=["get"],
+                ),
+                rbacv1b1.PolicyRule(
+                    apiGroups=[""],
+                    resources=["services"],
+                    verbs=["get", "list", "update", "watch"],
+                ),
+                rbacv1b1.PolicyRule(
+                    apiGroups=["extensions"],
+                    resources=["ingresses"],
+                    verbs=["get", "list", "watch"],
+                ),
+                rbacv1b1.PolicyRule(
+                    apiGroups=[""],
+                    resources=["events"],
+                    verbs=["create", "patch"],
+                ),
+                rbacv1b1.PolicyRule(
+                    apiGroups=["extensions"],
+                    resources=["ingresses/status"],
+                    verbs=["update"],
+                ),
+            ],
+        )],
+    )
+
+    kube.put(
+        name=name_prefix,
+        api_group="rbac.authorization.k8s.io",
+        data=[rbacv1b1.ClusterRoleBinding(
+            roleRef=rbacv1b1.RoleRef(
+                apiGroup="rbac.authorization.k8s.io",
+                kind="ClusterRole",
+                name=name_prefix,
+            ),
+            subjects=[
+                rbacv1b1.Subject(
+                    kind="ServiceAccount",
+                    name=sa_name,
+                    namespace=namespace,
+                ),
+            ],
+        )],
+    )
+
+    kube.put(
+        name=name_prefix,
+        namespace=namespace,
+        api_group="rbac.authorization.k8s.io",
+        data=[rbacv1b1.Role(
+            metadata=metadata,
+            rules=[
+                rbacv1b1.PolicyRule(
+                    apiGroups=[""],
+                    resources=["configmaps", "endpoints", "pods", "secrets"],
+                    verbs=["list", "get", "watch"],
+                ),
+                rbacv1b1.PolicyRule(
+                    apiGroups=[""],
+                    resources=["namespaces"],
+                    verbs=["get"],
+                ),
+                rbacv1b1.PolicyRule(
+                    apiGroups=[""],
+                    resources=["services"],
+                    verbs=["get", "list", "update", "watch"],
+                ),
+                rbacv1b1.PolicyRule(
+                    apiGroups=["extensions"],
+                    resources=["ingresses"],
+                    verbs=["get", "list", "watch"],
+                ),
+                rbacv1b1.PolicyRule(
+                    apiGroups=[""],
+                    resources=["events"],
+                    verbs=["create", "patch"],
+                ),
+                rbacv1b1.PolicyRule(
+                    apiGroups=["extensions"],
+                    resources=["ingresses/status"],
+                    verbs=["update"],
+                ),
+                rbacv1b1.PolicyRule(
+                    apiGroups=[""],
+                    resources=["configmaps"],
+                    resourceNames=["ingress-controller-leader-nginx"],
+                    verbs=["get", "update"],
+                ),
+                rbacv1b1.PolicyRule(
+                    apiGroups=[""],
+                    resources=["configmaps"],
+                    verbs=["create"],
+                ),
+                rbacv1b1.PolicyRule(
+                    apiGroups=[""],
+                    resources=["endpoints"],
+                    verbs=["create", "get", "update"],
+                ),
+                rbacv1b1.PolicyRule(
+                    apiGroups=[""],
+                    resources=["events"],
+                    verbs=["create", "patch"],
+                ),
+            ],
+        )],
+    )
+
+    kube.put(
+        name=name_prefix,
+        namespace=namespace,
+        api_group="rbac.authorization.k8s.io",
+        data=[rbacv1b1.RoleBinding(
+            metadata=metadata,
+            roleRef=rbacv1b1.RoleRef(
+                apiGroup="rbac.authorization.k8s.io",
+                kind="Role",
+                name=name_prefix,
+            ),
+            subjects=[
+                rbacv1b1.Subject(
+                    kind="ServiceAccount",
+                    name=sa_name,
+                    namespace=namespace,
+                ),
+            ],
+        )],
+    )
+
+    http = intstr.IntOrString(intVal=80)
+    https = intstr.IntOrString(intVal=443)
+
+    ctlr_meta = proto.clone(metadata)
+    ctlr_meta.labels["component"] = "controller"
+
+    cm_data = [corev1.ConfigMap(
+        metadata=ctlr_meta,
+        data={
+            "enable-vts-status": "false",
+            "generate-request-id": "true",
+            "log-format-escape-json": "true",
+            "max-worker-connections": "0",  # to use max-worker-open-files
+            "max-worker-open-files": "0",  # max open files by system's limit
+        },
+    )]
+
+    kube.put(
+        name=name_prefix + "-controller",
+        namespace=namespace,
+        data=cm_data,
+    )
+
+    svc_meta = proto.clone(ctlr_meta)
+    svc_meta.annotations["cloud.google.com/load-balancer-type"] = "Internal"
+    policy = "Local"
+
+    svc_spec = corev1.ServiceSpec(
+        type="LoadBalancer",
+        ports=[
+            corev1.ServicePort(name="http", port=80, protocol="TCP", targetPort=http),
+            corev1.ServicePort(name="https", port=443, protocol="TCP", targetPort=https),
+        ],
+        selector=ctlr_meta.labels,
+        externalTrafficPolicy=policy,
+    )
+
+    kube.put(
+        name=name_prefix + "-controller-cluster-traffic",
+        namespace=namespace,
+        data=[corev1.Service(metadata=svc_meta, spec=svc_spec)],
+    )
+
+    no_ctlr_pods_plz = corev1.PodAffinityTerm(
+        labelSelector=metav1.LabelSelector(matchLabels=ctlr_meta.labels),
+        namespaces=[namespace],
+        topologyKey="kubernetes.io/hostname",
+    )
+
+    d = appsv1.Deployment(
+        metadata=ctlr_meta,
+        spec=appsv1.DeploymentSpec(
+            replicas=3,
+            selector=metav1.LabelSelector(matchLabels=ctlr_meta.labels),
+            template=corev1.PodTemplateSpec(
+                metadata=ctlr_meta,
+                spec=corev1.PodSpec(
+                    containers=[
+                        corev1.Container(
+                            name="nginx-ingress-controller",
+                            image="quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.22.0",
+                            imagePullPolicy="IfNotPresent",
+                            args=[
+                                "/nginx-ingress-controller",
+                                "--default-backend-service={namespace}/{prefix}-default-backend".format(
+                                    namespace=namespace, prefix=name_prefix),
+                                "--election-id=ingress-controller-leader",
+                                "--ingress-class=nginx",
+                                "--configmap={namespace}/{prefix}-controller".format(
+                                    namespace=namespace, prefix=name_prefix),
+                                "--default-ssl-certificate=ingress/piedpiper.com",
+                            ],
+                            env=[
+                                env_from_field(
+                                    "POD_NAME", "metadata.name"),
+                                env_from_field(
+                                    "POD_NAMESPACE", "metadata.namespace"),
+                                env("CM_HASH", hash.md5(str(cm_data))),
+                            ],
+                            livenessProbe=health_probe(10254),
+                            readinessProbe=health_probe(10254),
+                            ports=[
+                                container_port("http", 80),
+                                container_port("https", 443),
+                                container_port("metrics", 10254),
+                            ],
+                        ),
+                    ],
+                    terminationGracePeriodSeconds=60,
+                    serviceAccountName=sa_name,
+                    nodeSelector={
+                        "dedicated": "nginx-ingress",
+                    },
+                    tolerations=[
+                        corev1.Toleration(
+                            key="dedicated",
+                            operator="Equal",
+                            value="nginx-ingress",
+                            effect="NoSchedule",
+                        ),
+                    ],
+                    affinity=corev1.Affinity(
+                        podAntiAffinity=corev1.PodAntiAffinity(
+                            requiredDuringSchedulingIgnoredDuringExecution=[
+                                no_ctlr_pods_plz,
+                            ],
+                        ),
+                    ),
+                    priorityClassName="cluster-addon-critical",
+                ),
+            ),
+            strategy=appsv1.DeploymentStrategy(
+                type="RollingUpdate",
+                rollingUpdate=rolling_update_dep(),
+            ),
+        ),
+    )
+
+    kube.put(
+        name=name_prefix + "-controller",
+        namespace=namespace,
+        data=[d],
+    )
+
+
+    bknd_meta = proto.clone(metadata)
+    bknd_meta.labels["component"] = "default-backend"
+    kube.put(
+        name=name_prefix + "-default-backend",
+        namespace=namespace,
+        data=[corev1.Service(
+            metadata=bknd_meta,
+            spec=corev1.ServiceSpec(
+                type="NodePort",
+                selector=bknd_meta.labels,
+                ports=[
+                    corev1.ServicePort(
+                        name="http",
+                        port=80,
+                        protocol="TCP",
+                        targetPort=intstr.IntOrString(intVal=8080),
+                    ),
+                ],
+                externalTrafficPolicy="Cluster",
+            ),
+        )],
+    )
+
+    kube.put(
+        name=name_prefix + "-default-backend",
+        namespace=namespace,
+        data=[appsv1.Deployment(
+            metadata=bknd_meta,
+            spec=appsv1.DeploymentSpec(
+                replicas=3,
+                selector=metav1.LabelSelector(matchLabels=bknd_meta.labels),
+                template=corev1.PodTemplateSpec(
+                    metadata=metav1.ObjectMeta(labels=bknd_meta.labels),
+                    spec=corev1.PodSpec(
+                        containers=[
+                            corev1.Container(
+                                name="nginx-ingress-default-backend",
+                                image="k8s.gcr.io/defaultbackend:1.3",
+                                imagePullPolicy="IfNotPresent",
+                                env=[
+                                    env_from_field("POD_NAME", "metadata.name"),
+                                    env_from_field("POD_NAMESPACE", "metadata.namespace"),
+                                ],
+                                livenessProbe=health_probe(8080, init_delay=30, timeout=5),
+                                ports=[container_port("http", 8080)],
+                            ),
+                        ],
+                        terminationGracePeriodSeconds=60,
+                    ),
+                ),
+                strategy=appsv1.DeploymentStrategy(
+                    type="RollingUpdate",
+                    rollingUpdate=rolling_update_dep(),
+                ),
+            ),
+        )],
+    )
+
+
+def remove(ctx):
+    kube.delete(deployment=namespace+"/"+name_prefix + "-default-backend")
+    kube.delete(deployment=namespace+"/"+name_prefix + "-controller")
+    kube.delete(configmap=namespace+"/"+name_prefix + "-controller")
+    kube.delete(clusterrole=name_prefix)
+    kube.delete(clusterrolebinding=name_prefix)

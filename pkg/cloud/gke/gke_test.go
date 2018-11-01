@@ -1,0 +1,65 @@
+// Copyright 2019 GM Cruise LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package gke
+
+import (
+	"errors"
+	"testing"
+
+	"go.starlark.net/starlark"
+
+	util "github.com/cruise-automation/isopod/pkg/testing"
+)
+
+func TestGKEBuiltin(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		expr    string
+		wantVal starlark.Value
+		wantErr error
+	}{
+		{
+			name:    "reference first field",
+			expr:    `gke(cluster="dev", location="us-west1", project="projID").cluster`,
+			wantVal: starlark.String("dev"),
+		},
+		{
+			name:    "reference second field",
+			expr:    `gke(cluster="dev", location="us-west1", project="projID").location`,
+			wantVal: starlark.String("us-west1"),
+		},
+		{
+			name:    "missing required field",
+			expr:    `gke(cluster="dev", location="us-west1")`,
+			wantErr: errors.New("<gke> requires field `project'"),
+		},
+		{
+			name:    "more fields than required",
+			expr:    `gke(cluster="dev", location="us-west1", project="projID", foo="bar").foo`,
+			wantVal: starlark.String("bar"),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			pkgs := starlark.StringDict{"gke": NewGKEBuiltin("some-sa-key", "Isopod")}
+			sval, _, err := util.Eval(t.Name(), tc.expr, nil, pkgs)
+			if !util.ErrsEqual(err, tc.wantErr) {
+				t.Fatalf("want error %v got %v", tc.wantErr, err)
+			}
+			if sval != tc.wantVal {
+				t.Fatalf("want %v got %v", tc.wantVal, sval)
+			}
+		})
+	}
+}

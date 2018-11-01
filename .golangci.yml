@@ -1,0 +1,122 @@
+run:
+  # timeout for analysis, e.g. 30s, 5m, default is 1m
+  deadline: 20m
+
+  # which dirs to skip: they won't be analyzed;
+  # can use regexp here: generated.*, regexp is applied on full path;
+  # default value is empty list, but next dirs are always skipped independently
+  # from this option's value:
+  #   	vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
+  skip-dirs:
+    - vendor$
+
+linters:
+  fast: false
+  disable-all: true
+  enable:
+  - deadcode
+  - depguard
+  - dupl
+  - errcheck
+  - goconst
+  - gocritic
+  - gocyclo
+  - gofmt
+  - goimports
+  - golint
+  - gosimple
+  - govet
+  - ineffassign
+  - interfacer
+  - maligned
+  - misspell
+  - nakedret
+  - staticcheck
+  - structcheck
+  - stylecheck
+  - typecheck
+  - unconvert
+  - unparam
+  - unused
+  - varcheck
+
+linters-settings:
+  goimports:
+    # put imports beginning with prefix after 3rd-party packages;
+    # it's a comma-separated list of prefixes
+    local-prefixes: github.robot.car/cruise/isopod/
+
+  maligned:
+    # print struct with more effective memory layout or not, false by default
+    suggest-new: true
+
+  misspell:
+    # Correct spellings using locale preferences for US or UK.
+    # Default is to use a neutral variety of English.
+    # Setting locale to US will correct the British spelling of 'colour' to 'color'.
+    locale: US
+
+  lll:
+    # max line length, lines longer will be reported. Default is 120.
+    # '\t' is counted as 1 character by default, and can be changed with the tab-width option
+    line-length: 120
+
+  gocritic:
+    # For the full list of rules and their meanings, visit https://go-critic.github.io/overview
+    enabled-checks:
+    - appendAssign
+    - appendCombine
+    - argOrder
+    - assignOp
+    - badCond
+    - boolExprSimplify
+    - captLocal
+    - caseOrder
+    - codegenComment
+    - commentFormatting
+    - commentedOutCode
+    - commentedOutImport
+    - defaultCaseOrder
+    - deprecatedComment
+    - docStub
+    - dupArg
+    - dupBranchBody
+    - dupCase
+    - dupSubExpr
+    - elseif
+    - emptyFallthrough
+    - emptyStringTest
+    - equalFold
+    - flagDeref
+    - flagName
+    - hexLiteral
+    - hugeParam
+    - ifElseChain
+    - importShadow
+    - indexAlloc
+    - methodExprCall
+    - nestingReduce
+    - nilValReturn
+    - octalLiteral
+    - offBy1
+    - paramTypeCombine
+    - rangeExprCopy
+    - rangeValCopy
+    - regexpMust
+    - singleCaseSwitch
+    - sloppyLen
+    - sloppyReassign
+    - stringXbytes
+    - switchTrue
+    - typeAssertChain
+    - typeSwitchVar
+    - typeUnparen
+    - underef
+    - unlabelStmt
+    - unlambda
+    - unnecessaryBlock
+    - unslice
+    - valSwap
+    - weakCond
+    - wrapperFunc
+    - yodaStyleExpr
