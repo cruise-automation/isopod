@@ -1,6 +1,11 @@
 Isopod
 ======
 
+[![CircleCI](https://circleci.com/gh/cruise-automation/isopod.svg?style=shield)](https://circleci.com/gh/cruise-automation/isopod)
+[![Go Report Card](https://goreportcard.com/badge/github.com/cruise-automation/isopod)](https://goreportcard.com/report/github.com/cruise-automation/isopod)
+[![GitHub Release](https://img.shields.io/github/release/cruise-automation/isopod.svg)](https://github.com/cruise-automation/isopod/releases)
+[![GoDoc](https://godoc.org/github.com/cruise-automation/isopod?status.svg)](https://godoc.org/github.com/cruise-automation/isopod)
+
 Isopod is an expressive DSL framework for Kubernetes configuration. Without
 intermediate YAML artifacts, Isopod renders Kubernetes objects as [Protocol
 Buffers](https://github.com/protocolbuffers/protobuf), so they are strongly
