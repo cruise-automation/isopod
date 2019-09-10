@@ -11,7 +11,7 @@ intermediate YAML artifacts, Isopod renders Kubernetes objects as [Protocol
 Buffers](https://github.com/protocolbuffers/protobuf), so they are strongly
 typed and consumed directly by the Kubernetes API.
 
-With Isopod, configuration are scripted in
+With Isopod, configurations are scripted in
 [Starlark](https://github.com/google/starlark-go), a Python dialect by Google
 also used by [Bazel](https://github.com/bazelbuild/bazel) and
 [Buck](https://github.com/facebook/buck) build systems. Isopod offers runtime
