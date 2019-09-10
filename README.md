@@ -11,7 +11,7 @@ intermediate YAML artifacts, Isopod renders Kubernetes objects as [Protocol
 Buffers](https://github.com/protocolbuffers/protobuf), so they are strongly
 typed and consumed directly by the Kubernetes API.
 
-With Isopod, Configuration are scripted in
+With Isopod, configuration are scripted in
 [Starlark](https://github.com/google/starlark-go), a Python dialect by Google
 also used by [Bazel](https://github.com/bazelbuild/bazel) and
 [Buck](https://github.com/facebook/buck) build systems. Isopod offers runtime
@@ -19,6 +19,12 @@ built-ins to access services and utilities such as Vault secret management,
 Kubernetes apiserver, HTTP requester, Base64 encoder, and UUID generator, etc.
 Isopod uses separate runtime for unit tests to mock all built-ins, providing the
 test coverage not possible before.
+
+A 5-min read, [this medium](https://medium.com/cruise/isopod-5ad7c565d350) post
+explains the inefficiency of existing YAML templating tools when dealing values
+not statically known and complicated control logics such as loops and branches.
+It also gives simple code examples to show why Isopod is an expressive,
+hermetic, and extensible solution to configuration management in Kubernetes.
 
 ---
 
@@ -221,7 +227,7 @@ Supported args:
   + `namespace` (Optional) - Namespace (`.metadata.namespace`) of the resource
   + `api_group` (Optional) - API group (without version) of the resource. If
      not provided, Isopod runtime will attempt to deduce the resource from
-     just Proto type name which is unrialable. It is recommended to set this
+     just Proto type name which is unreliable. It is recommended to set this
      for all objects outside of `core` group.
   + `subresource` (Optional) - A subresource specifier (e.g `/status`).
   + `data` - A list of Protobuf definitions of objects to be created.
@@ -246,7 +252,7 @@ kube.delete(clusterrole="nginx", api_group = "rbac.authorization.k8s.io")
 ####  `kube.put_yaml`
 
 Same as `put` but for YAML/JSON data. To be used for CRDs and other custom
-types. `kube.put` usage is preferred for standard set of Kubernetes types.
+types. `kube.put` usage is preferred for the standard set of Kubernetes types.
 
 ```python
 ark_config = """
@@ -295,10 +301,10 @@ kube.put_yaml(
 #### `kube.get`
 
 Reads object from API Server. If `wait` argument is set to duration (e.g `10s`)
-will block until object is successfully read or timer expires. If `json=True`
-optional argument is provided, will render object as unstructured JSON
-represented as Starlark `dict` at top level. This is useful for CRDs as they
-typically do not support Protobuf representation.
+will block until the object is successfully read or timer expires. If
+`json=True` optional argument is provided, will render object as unstructured
+JSON represented as Starlark `dict` at top level. This is useful for CRDs as
+they typically do not support Protobuf representation.
 
 ```python
 # Wait 60s for Service Account token secret.
@@ -313,7 +319,7 @@ cadmin = kube.get(clusterrbacsyncconfig="cluster-admin",
 #### `kube.exists`
 
 Checks whether a resource exists. If `wait` argument is set to duration (e.g
-`10s`) will block until object is succesfully read or timer expires.
+`10s`) will block until the object is successfully read or timer expires.
 
 ```python
 # Assert that the resource doesn't exist.
@@ -403,13 +409,13 @@ helm.apply(
 
 Supported args:
 + `release_name` - Release Name for the Helm chart.
-+ `chart` - Source Path of the chart. This can be a full path or a path
-  relative to working directory. Having a leading double-slash (//) will make it
++ `chart` - Source Path of the chart. This can be a full path or a path relative
+  to the working directory. Having a leading double-slash (//) will make it
   relative path.
 + `namespace` (Optional) - Namespace (`.metadata.namespace`) of the resources
 + `values` (Optional) - A list of Starlark Values used as input values for the
-   charts. The ordering of a list matters, and the elements get overridden
-   by the trailing values.
+   charts. The ordering of a list matters, and the elements get overridden by
+   the trailing values.
 
 
 ## Misc
@@ -443,7 +449,7 @@ redeploy when a config or secret changes.
 
 #### `sleep`
 
-Pauses execution for specificed duration (requires Go duration `string`).
+Pauses execution for specified duration (requires Go duration `string`).
 
 #### `error`
 
