@@ -48,6 +48,23 @@ jobs:
           at: .
       - run: VAULT_TOKEN=not-used bin/isopod-linux test
 
+  publish:
+    docker:
+      - image: cibuilds/github:0.13
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Publish Release on GitHub"
+          command: |
+            ghr -t ${GITHUB_TOKEN} \
+              -u ${CIRCLE_PROJECT_USERNAME} \
+              -r ${CIRCLE_PROJECT_REPONAME} \
+              -c ${CIRCLE_SHA1} \
+              -n ${CIRCLE_TAG} \
+              -replace ${CIRCLE_TAG} \
+              ./bin/
+
 workflows:
   version: 2
   presubmit:
@@ -58,3 +75,20 @@ workflows:
       - testdata:
           requires:
             - build
+
+  release:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+      - publish:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
