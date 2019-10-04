@@ -21,7 +21,7 @@ Isopod uses separate runtime for unit tests to mock all built-ins, providing the
 test coverage not possible before.
 
 A 5-min read, [this medium](https://medium.com/cruise/isopod-5ad7c565d350) post
-explains the inefficiency of existing YAML templating tools when dealing values
+explains the inefficiency of existing YAML templating tools when dealing with values
 not statically known and complicated control logics such as loops and branches.
 It also gives simple code examples to show why Isopod is an expressive,
 hermetic, and extensible solution to configuration management in Kubernetes.
