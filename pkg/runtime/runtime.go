@@ -309,6 +309,10 @@ func (r *runtime) Run(ctx context.Context, cmd Command, skyCtx starlark.Value) e
 		loadedNs = append(loadedNs, a.Name)
 	}
 
+	if len(loaded) == 0 {
+		return fmt.Errorf("no addon matches the filter regexp")
+	}
+
 	log.Infof("Running `%s' for %v...", cmd, loadedNs)
 
 	if err := r.runCommand(ctx, cmd, loaded); err != nil {
