@@ -134,6 +134,8 @@ func ValueFromJSON(v interface{}) (starlark.Value, error) {
 		return starlark.String(t), nil
 	case float64:
 		return starlark.Float(t), nil
+	case int64:
+		return starlark.MakeInt64(t), nil
 	case bool:
 		return starlark.Bool(t), nil
 	case json.Number:
