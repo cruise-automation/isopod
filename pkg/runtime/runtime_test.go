@@ -82,7 +82,7 @@ func TestForEachCluster(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var gotClusters []string
 			if err := runtime.ForEachCluster(ctx, tc.selector, func(k8sVendor cloud.KubernetesVendor) {
-				c := k8sVendor.AddonSkyCtx()
+				c := k8sVendor.AddonSkyCtx(tc.selector)
 				gotClusters = append(gotClusters, string(c.Attrs["cluster"].(starlark.String)))
 
 				if err := runtime.Run(ctx, InstallCommand, c); err != nil {

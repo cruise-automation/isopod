@@ -211,7 +211,7 @@ func main() {
 			log.Exitf("Failed to load addons runtime: %v", err)
 		}
 
-		if err := addons.Run(ctx, cmd, k8sVendor.AddonSkyCtx()); err != nil {
+		if err := addons.Run(ctx, cmd, k8sVendor.AddonSkyCtx(ctxParams)); err != nil {
 			errorReturned = true
 			log.Errorf("addons run failed: %v", err)
 		}
