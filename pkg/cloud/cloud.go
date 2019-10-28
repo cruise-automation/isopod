@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	log "github.com/golang/glog"
 	"go.starlark.net/starlark"
 	"k8s.io/client-go/rest"
 
@@ -36,7 +37,8 @@ type KubernetesVendor interface {
 	KubeConfig(ctx context.Context) (*rest.Config, error)
 
 	// AddonSkyCtx constructs a Starlark ctx object passed to each addon.
-	AddonSkyCtx() *addon.SkyCtx
+	// If additional context values could be passed to addon using the more input.
+	AddonSkyCtx(more map[string]string) *addon.SkyCtx
 }
 
 // AbstractKubeVendor contains the common impl of all KubernetesVendor.
@@ -80,6 +82,11 @@ func (a *AbstractKubeVendor) String() string {
 func (a *AbstractKubeVendor) Type() string { return a.typeStr }
 
 // AddonSkyCtx is part of the cloud.KubernetesVendor interface.
-func (a *AbstractKubeVendor) AddonSkyCtx() *addon.SkyCtx {
+func (a *AbstractKubeVendor) AddonSkyCtx(more map[string]string) *addon.SkyCtx {
+	for k, v := range more {
+		if err := a.SkyCtx.SetField(k, starlark.String(v)); err != nil {
+			log.Errorf("failed to set addon ctx `%s=%s': %v", k, v, err)
+		}
+	}
 	return a.SkyCtx
 }
