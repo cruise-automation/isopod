@@ -381,6 +381,7 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 			GroupVersion: admissionregistrationv1b1.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "validatingwebhookconfigurations", Kind: "ValidatingWebhookConfiguration"},
+				{Name: "mutatingwebhookconfigurations", Kind: "MutatingWebhookConfiguration"},
 			},
 		},
 	}
