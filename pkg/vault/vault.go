@@ -160,6 +160,7 @@ func (p *vaultPackage) vaultWriteFn(t *starlark.Thread, b *starlark.Builtin, arg
 	}
 
 	if p.dryRun {
+		r.ClientToken = "redacted"
 		log.V(1).Infof("<%v>: dry run: %v", b.Name(), r)
 		return starlark.None, nil
 	}
