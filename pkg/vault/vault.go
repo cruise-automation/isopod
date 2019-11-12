@@ -160,6 +160,7 @@ func (p *vaultPackage) vaultWriteFn(t *starlark.Thread, b *starlark.Builtin, arg
 	}
 
 	if p.dryRun {
+		r.ClientToken = "redacted"
 		log.V(1).Infof("<%v>: dry run: %v", b.Name(), r)
 		return starlark.None, nil
 	}
@@ -173,7 +174,17 @@ func (p *vaultPackage) vaultWriteFn(t *starlark.Thread, b *starlark.Builtin, arg
 		return nil, fmt.Errorf("<%v>: request failed: %v", b.Name(), err)
 	}
 
-	return starlark.None, nil
+	d := json.NewDecoder(resp.Body)
+	respData := map[string]interface{}{}
+	if err := d.Decode(&respData); err != nil {
+		return starlark.None, nil
+	}
+
+	v, err := util.ValueFromNestedMap(respData)
+	if err != nil {
+		return starlark.None, nil
+	}
+	return v, nil
 }
 
 // vaultExistFn is a starlark built-in function that checks if a secret path exists on vault.
