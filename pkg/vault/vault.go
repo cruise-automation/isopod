@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"net/http"
 
-	log "github.com/golang/glog"
 	vault "github.com/hashicorp/vault/api"
 	"go.starlark.net/starlark"
 
@@ -35,14 +34,12 @@ import (
 type vaultPackage struct {
 	*isopod.Module
 	client *vault.Client
-	dryRun bool
 }
 
 // New returns a new skaylark.HasAttrs object for vault package.
-func New(c *vault.Client, dryRun bool) *isopod.Module {
+func New(c *vault.Client) *isopod.Module {
 	v := &vaultPackage{
 		client: c,
-		dryRun: dryRun,
 	}
 	v.Module = &isopod.Module{
 		Name: "vault",
@@ -156,13 +153,7 @@ func (p *vaultPackage) vaultWriteFn(t *starlark.Thread, b *starlark.Builtin, arg
 
 	r := p.client.NewRequest("PUT", "/v1/"+path)
 	if err := r.SetJSONBody(data); err != nil {
-		return nil, fmt.Errorf("failed to set request body to %v: %v", data, err)
-	}
-
-	if p.dryRun {
-		r.ClientToken = "redacted"
-		log.V(1).Infof("<%v>: dry run: %v", b.Name(), r)
-		return starlark.None, nil
+		return nil, fmt.Errorf("failed to set request body to %+v: %v", data, err)
 	}
 
 	ctx := t.Local(addon.GoCtxKey).(context.Context)

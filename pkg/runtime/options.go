@@ -71,7 +71,10 @@ func WithNoSpin() Option {
 // WithVault returns an Option that enables "vault" package.
 func WithVault(c *vapi.Client) Option {
 	return fnOption(func(opts *options) error {
-		opts.pkgs["vault"] = vault.New(c, opts.dryRun)
+		opts.pkgs["vault"] = vault.New(c)
+		if opts.dryRun {
+			opts.pkgs["vault"], _, _ = vault.NewFake()
+		}
 		return nil
 	})
 }

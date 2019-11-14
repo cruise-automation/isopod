@@ -15,20 +15,22 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strings"
 
-	vault "github.com/hashicorp/vault/api"
+	vaultapi "github.com/hashicorp/vault/api"
 	"go.starlark.net/starlark"
-
-	isopod "github.com/cruise-automation/isopod/pkg"
 )
 
 type fakeVault struct {
-	m map[string]string
+	realClient *vaultapi.Client
+	m          map[string]string
 }
 
 func (h *fakeVault) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -36,8 +38,28 @@ func (h *fakeVault) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		v, ok := h.m[r.URL.Path]
 		if !ok {
-			http.Error(w, "not found", http.StatusNotFound)
-			return
+			// Fall back to real Vault client if fake key does not exist.
+			ctx := context.Background()
+			r := h.realClient.NewRequest("GET", r.URL.Path)
+			resp, err := h.realClient.RawRequestWithContext(ctx, r)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			if err := resp.Error(); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			if _, err := w.Write(bodyBytes); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
 		}
 
 		m := json.RawMessage(fmt.Sprintf(`{"data": %s}`, v))
@@ -58,6 +80,20 @@ func (h *fakeVault) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// If it's a PKI issue request, return a private key + cert.
+		if strings.Contains(r.URL.Path, "/issue/") {
+			m := json.RawMessage(`{"data":{"ca_chain":["ca0","ca1"],"certificate":"cert","issuing_ca":"ca","private_key":"privatekey"}}`)
+			b, err := m.MarshalJSON()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			if _, err := w.Write(b); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+		}
+
 		h.m[r.URL.Path] = string(bs)
 	default:
 		http.Error(w, "unexpected method", http.StatusMethodNotAllowed)
@@ -66,27 +102,24 @@ func (h *fakeVault) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // NewFake returns a new fake vault module for testing.
 func NewFake() (m starlark.HasAttrs, closeFn func(), err error) {
-	s := httptest.NewTLSServer(&fakeVault{m: make(map[string]string)})
+	// Create a real Vault client for read fall back if key does not exist.
+	vaultC, err := vaultapi.NewClient(&vaultapi.Config{
+		Address: os.Getenv("VAULT_ADDR"),
+	})
+	vaultC.SetToken(os.Getenv("VAULT_TOKEN"))
 
-	c, err := vault.NewClient(&vault.Config{
+	s := httptest.NewTLSServer(&fakeVault{m: make(map[string]string), realClient: vaultC})
+
+	if err != nil {
+		return nil, s.Close, fmt.Errorf("failed to initialize Vault client: %v", err)
+	}
+
+	c, err := vaultapi.NewClient(&vaultapi.Config{
 		Address:    s.URL,
 		HttpClient: s.Client(),
 	})
 	if err != nil {
 		return nil, s.Close, err
 	}
-	return New(c, false /* dryRun */), s.Close, nil
-}
-
-// NewFakeWithServer returns a new fake vault module that uses s as its HTTP
-// server.
-func NewFakeWithServer(s *httptest.Server, dryRun bool) (*isopod.Module, error) {
-	c, err := vault.NewClient(&vault.Config{
-		Address:    s.URL,
-		HttpClient: s.Client(),
-	})
-	if err != nil {
-		return nil, err
-	}
-	return New(c, dryRun), nil
+	return New(c), s.Close, nil
 }
