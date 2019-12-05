@@ -90,8 +90,12 @@ func buildKubeRestConf(
 	if err != nil {
 		return nil, fmt.Errorf("failed to base64 decode the cluster CA cert: %v", err)
 	}
+	endpoint := cluster.Endpoint
+	if cluster.PrivateClusterConfig != nil && cluster.PrivateClusterConfig.PrivateEndpoint != "" {
+		endpoint = cluster.PrivateClusterConfig.PrivateEndpoint
+	}
 	return &rest.Config{
-		Host: "https://" + cluster.Endpoint,
+		Host: "https://" + endpoint,
 		TLSClientConfig: rest.TLSClientConfig{
 			CAData: caCert, // pem encoded
 		},
