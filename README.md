@@ -90,7 +90,7 @@ CLUSTERS = [
         cluster="paas-prod",
         location="us-west1",
         project="cruise-paas-prod",
-        # use_internal_ip="true", # (optional, default use public endpoint)
+        use_internal_ip="false", # default to "false", which uses public endpoint
     ),
 ]
 
@@ -134,7 +134,7 @@ gke(
     cluster="paas-prod",
     location="us-west1",
     project="cruise-paas-prod",
-    # use_internal_ip="true", # (optional, default use public endpoint)
+    use_internal_ip="false", # default to "false", which uses public endpoint
 ),
 ```
 
