@@ -116,7 +116,7 @@ extended to cover other Kubernetes vendors, such as EKS and AKS.
 
 #### `gke()`
 
-Represents a Google Kubernetes Engine. Authenticates using Google Cloud Service Account Credentials or Google Default Application Credentials. Requires the `cluster`, `location`, and `project` fields. Additional fields are allowed.
+Represents a Google Kubernetes Engine. Authenticates using Google Cloud Service Account Credentials or Google Default Application Credentials. Requires the `cluster`, `location` and `project` fields, while optionally takes `use_internal_ip` field to connect API server via private endpoint. Additional fields are allowed.
 
 #### `onprem()`
 
@@ -133,6 +133,7 @@ gke(
     cluster="paas-prod",
     location="us-west1",
     project="cruise-paas-prod",
+    # use_internal_ip="true", # (optional, default use public endpoint)
 ),
 ```
 
