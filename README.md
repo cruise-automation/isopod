@@ -90,6 +90,7 @@ CLUSTERS = [
         cluster="paas-prod",
         location="us-west1",
         project="cruise-paas-prod",
+        # use_internal_ip="true", # (optional, default use public endpoint)
     ),
 ]
 
