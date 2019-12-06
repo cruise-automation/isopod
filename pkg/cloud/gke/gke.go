@@ -102,6 +102,10 @@ func clpFromClusterCtx(c *addon.SkyCtx) (cluster, location, project, useInternal
 	if project, err = stringFromValue(c.Attrs[ProjectKey]); err != nil {
 		return
 	}
-	useInternalIP, _ = stringFromValue(c.Attrs[UseInternalIPKey])
+	if val := c.Attrs[UseInternalIPKey]; val != nil {
+		if v, ok := val.(starlark.String); ok {
+			useInternalIP = string(v)
+		}
+	}
 	return
 }
