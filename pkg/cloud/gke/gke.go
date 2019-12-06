@@ -33,6 +33,8 @@ const (
 	ProjectKey = "project"
 	// LocationKey is the name of the location field.
 	LocationKey = "location"
+	// UseInternalIPKey indicates if connecting API server via private endpoint
+	UseInternalIPKey = "use_internal_ip"
 )
 
 var (
@@ -72,11 +74,11 @@ func NewGKEBuiltin(svcAcctKeyFile, userAgent string) *starlark.Builtin {
 
 // KubeConfig is part of the cloud.KubernetesVendor interface.
 func (g *GKE) KubeConfig(ctx context.Context) (*rest.Config, error) {
-	cluster, location, project, err := clpFromClusterCtx(g.SkyCtx)
+	cluster, location, project, useInternalIP, err := clpFromClusterCtx(g.SkyCtx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract cluster info from %v: %v", g, err)
 	}
-	return BuildKubeRestConfSACred(ctx, cluster, location, project, g.svcAcctKeyFile, g.userAgent)
+	return BuildKubeRestConfSACred(ctx, cluster, location, project, useInternalIP, g.svcAcctKeyFile, g.userAgent)
 }
 
 func stringFromValue(v starlark.Value) (string, error) {
@@ -90,13 +92,20 @@ func stringFromValue(v starlark.Value) (string, error) {
 	return string(s), nil
 }
 
-func clpFromClusterCtx(c *addon.SkyCtx) (cluster, location, project string, err error) {
+func clpFromClusterCtx(c *addon.SkyCtx) (cluster, location, project, useInternalIP string, err error) {
 	if cluster, err = stringFromValue(c.Attrs[ClusterKey]); err != nil {
 		return
 	}
 	if location, err = stringFromValue(c.Attrs[LocationKey]); err != nil {
 		return
 	}
-	project, err = stringFromValue(c.Attrs[ProjectKey])
+	if project, err = stringFromValue(c.Attrs[ProjectKey]); err != nil {
+		return
+	}
+	if val := c.Attrs[UseInternalIPKey]; val != nil {
+		if v, ok := val.(starlark.String); ok {
+			useInternalIP = string(v)
+		}
+	}
 	return
 }

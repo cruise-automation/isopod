@@ -45,34 +45,34 @@ func GoogleCredTokenSourceFromSAKey(ctx context.Context, svcAcctKeyFile string) 
 // key file. If such key is empty, fall back to using default application cred.
 func BuildKubeRestConfSACred(
 	ctx context.Context,
-	clusterName, location, project, svcAcctKeyFile, userAgent string,
+	clusterName, location, project, useInternalIP, svcAcctKeyFile, userAgent string,
 ) (*rest.Config, error) {
 	if svcAcctKeyFile == "" {
-		return BuildKubeRestConfDefaultCred(ctx, clusterName, location, project, userAgent)
+		return BuildKubeRestConfDefaultCred(ctx, clusterName, location, project, useInternalIP, userAgent)
 	}
 	TokenSrc, err := GoogleCredTokenSourceFromSAKey(ctx, svcAcctKeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get token source from service account: %v", err)
 	}
-	return buildKubeRestConf(ctx, clusterName, location, project, userAgent, TokenSrc)
+	return buildKubeRestConf(ctx, clusterName, location, project, useInternalIP, userAgent, TokenSrc)
 }
 
 // BuildKubeRestConfDefaultCred creates a k8s rest.Config using the google
 // application default credential.
 func BuildKubeRestConfDefaultCred(
 	ctx context.Context,
-	clusterName, location, project, userAgent string,
+	clusterName, location, project, useInternalIP, userAgent string,
 ) (*rest.Config, error) {
 	tokenSrc, err := google.DefaultTokenSource(ctx, container.CloudPlatformScope)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the google DefaultTokenSource: %v", err)
 	}
-	return buildKubeRestConf(ctx, clusterName, location, project, userAgent, tokenSrc)
+	return buildKubeRestConf(ctx, clusterName, location, project, useInternalIP, userAgent, tokenSrc)
 }
 
 func buildKubeRestConf(
 	ctx context.Context,
-	clusterName, location, project, userAgent string,
+	clusterName, location, project, useInternalIP, userAgent string,
 	tokenSrc oauth2.TokenSource,
 ) (*rest.Config, error) {
 	containerSvc, err := container.NewService(ctx, option.WithTokenSource(tokenSrc))
@@ -90,8 +90,16 @@ func buildKubeRestConf(
 	if err != nil {
 		return nil, fmt.Errorf("failed to base64 decode the cluster CA cert: %v", err)
 	}
+
+	// determine which endpoint to use to connect to API server on master
+	endpoint := cluster.Endpoint
+	if useInternalIP == "true" {
+		if cluster.PrivateClusterConfig != nil && cluster.PrivateClusterConfig.PrivateEndpoint != "" {
+			endpoint = cluster.PrivateClusterConfig.PrivateEndpoint
+		}
+	}
 	return &rest.Config{
-		Host: "https://" + cluster.Endpoint,
+		Host: "https://" + endpoint,
 		TLSClientConfig: rest.TLSClientConfig{
 			CAData: caCert, // pem encoded
 		},
