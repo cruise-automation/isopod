@@ -134,6 +134,7 @@ func buildAddonsRuntime(kubeC *rest.Config, mainFile string) (runtime.Runtime, e
 		runtime.WithKube(kubeC, *kubeDiff),
 		runtime.WithHelm(helmBaseDir),
 		runtime.WithAddonRegex(regexp.MustCompile(*addonRegex)),
+		runtime.WithFile(),
 	}
 	if *noSpin {
 		opts = append(opts, runtime.WithNoSpin())
