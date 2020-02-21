@@ -61,6 +61,11 @@ func TestVault(t *testing.T) {
 			expr:       "vault.read('foo/bar')",
 			wantResult: `map["a":"1" "b":"2"]`,
 		},
+		{
+			desc:       "Read data from `foo/bar2'",
+			expr:       "vault.read('foo/bar2')",
+			wantResult: `map["a":["1", "2"] "b":"2"]`,
+		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
 			pkgs := starlark.StringDict{"vault": tv}
