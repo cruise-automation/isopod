@@ -42,6 +42,11 @@ func TestVault(t *testing.T) {
 			wantResult: "None",
 		},
 		{
+			desc:       "Write list value to `foo/bar2'",
+			expr:       "vault.write('foo/bar2', a=['1','2'], b='2')",
+			wantResult: "None",
+		},
+		{
 			desc:       "Read raw data from `foo/bar'",
 			expr:       "vault.read_raw('foo/bar')",
 			wantResult: `map["data":map["a":"1" "b":"2"]]`,

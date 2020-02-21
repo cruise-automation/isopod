@@ -144,11 +144,22 @@ func (p *vaultPackage) vaultWriteFn(t *starlark.Thread, b *starlark.Builtin, arg
 
 	data := make(map[string]interface{}, len(kwargs))
 	for _, kv := range kwargs {
-		ss, ok := kv[1].(starlark.String)
-		if !ok {
-			return nil, fmt.Errorf("<%v>: value not a string: %v", b.Name(), kv[1])
+		switch value := kv[1].(type) {
+		case starlark.String:
+			data[string(kv[0].(starlark.String))] = string(value)
+		case *starlark.List:
+			list := make([]string, value.Len())
+			for i := 0; i < value.Len(); i++ {
+				ss, ok := value.Index(i).(starlark.String)
+				if !ok {
+					return nil, fmt.Errorf("<%v>: list value not a string: %v", b.Name(), value)
+				}
+				list[i] = string(ss)
+			}
+			data[string(kv[0].(starlark.String))] = list
+		default:
+			return nil, fmt.Errorf("<%v>: value not a string or list: %v", b.Name(), kv[1])
 		}
-		data[string(kv[0].(starlark.String))] = string(ss)
 	}
 
 	r := p.client.NewRequest("PUT", "/v1/"+path)
