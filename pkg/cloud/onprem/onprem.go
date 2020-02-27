@@ -16,12 +16,15 @@ package onprem
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"go.starlark.net/starlark"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/cruise-automation/isopod/pkg/cloud"
+	"github.robot.car/cruise/isopod/pkg/vault"
 )
 
 var (
@@ -56,5 +59,23 @@ func NewOnPremBuiltin(kubeConfigFile string) *starlark.Builtin {
 
 // KubeConfig is part of the cloud.KubernetesVendor interface.
 func (o *OnPrem) KubeConfig(ctx context.Context) (*rest.Config, error) {
+	kubeConfigVaultPath := o.AbstractKubeVendor.AddonSkyCtx(
+		map[string]string{}).Attrs["vaultkubeconfig"].(starlark.String).String()
+
+	// Should only access vault kubeconfig if the kubeConfigFile flag was not set
+	// and the vaultkubeconfig attribute is set in the star config.
+	if len(kubeConfigVaultPath) > 0 && len(o.kubeConfigFile) < 1 {
+		// Remove the surrounding quotes from the Starlark string
+		kubeConfigVaultPath = strings.Trim(kubeConfigVaultPath, `"`)
+
+		value, err := vault.ReadVaultPath(kubeConfigVaultPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read kubeconfig vault path: %v", err)
+		}
+
+		kubeconfig := []byte(value)
+
+		return clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+	}
 	return clientcmd.BuildConfigFromFlags("", o.kubeConfigFile)
 }
