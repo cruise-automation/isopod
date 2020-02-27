@@ -372,6 +372,9 @@ func (r *runtime) ForEachCluster(ctx context.Context, userCtx map[string]string,
 			continue
 		}
 
+		clusterName := k8sVendor.AddonSkyCtx(userCtx).Attrs["cluster"]
+		fmt.Printf("Current cluster: (%s)\n", clusterName)
+
 		fn(k8sVendor)
 	}
 	return nil

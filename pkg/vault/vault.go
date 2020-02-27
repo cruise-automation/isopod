@@ -220,3 +220,24 @@ func (p *vaultPackage) vaultExistFn(t *starlark.Thread, b *starlark.Builtin, arg
 
 	return starlark.True, nil
 }
+
+// ReadVaultPath takes in the Vault path and returns the value as a string.
+// Must have VAULT_ADDR set, and vault token is grabbed from flags.
+func ReadVaultPath(path string) (string, error) {
+	client, err := vault.NewClient(nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to initialize Vault client: %v", err)
+	}
+	c := client.Logical()
+
+	secret, err := c.Read(path)
+	if err != nil {
+		return "", err
+	}
+	if secret == nil {
+		return "", fmt.Errorf("vault secret contains no value")
+	}
+
+	data := secret.Data["value"]
+	return fmt.Sprint(data), nil
+}

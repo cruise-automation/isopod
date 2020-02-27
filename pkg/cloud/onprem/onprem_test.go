@@ -39,6 +39,11 @@ func TestOnPremBuiltin(t *testing.T) {
 			expr:    `onprem(cluster="minikube", env="dev").env`,
 			wantVal: starlark.String("dev"),
 		},
+		{
+			name:    "reference vaultkubeconfig field",
+			expr:    `onprem(cluster="test", env="dev", vaultkubeconfig="secret/test").vaultkubeconfig`,
+			wantVal: starlark.String("secret/test"),
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			pkgs := starlark.StringDict{"onprem": NewOnPremBuiltin("some-kubeconfig-file")}
