@@ -84,7 +84,7 @@ Example:
 
 ```python
 CLUSTERS = [
-    onprem(env="dev", cluster="minikube"),
+    onprem(env="dev", cluster="minikube", vaultkubeconfig="secret/path"),
     gke(
         env="prod",
         cluster="paas-prod",
@@ -121,7 +121,7 @@ Represents a Google Kubernetes Engine. Authenticates using Google Cloud Service 
 
 #### `onprem()`
 
-Represents an on-premise or self-managed Kubernetes cluster. Authenticates using the `kubeconfig` file. No fields are required.
+Represents an on-premise or self-managed Kubernetes cluster. Authenticates using the `kubeconfig` file or Vault path containing the `kubeconfig`. No fields are required, though setting the `vaultkubeconfig` field to the path in Vault where the KubeConfig exists is necessary to utilize this auth method.
 
 
 ## Addons
