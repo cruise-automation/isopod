@@ -38,6 +38,7 @@ import (
 	// Plugin imports for auth.
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
+	fileaddon "github.com/cruise-automation/isopod/pkg/file"
 	"github.com/cruise-automation/isopod/pkg/helm"
 	"github.com/cruise-automation/isopod/pkg/kube"
 	"github.com/cruise-automation/isopod/pkg/vault"
@@ -154,6 +155,13 @@ func WithHelm(baseDir string) Option {
 func WithAddonRegex(r *regexp.Regexp) Option {
 	return fnOption(func(opts *options) error {
 		opts.addonRe = r
+		return nil
+	})
+}
+
+func WithFile() Option {
+	return fnOption(func(opts *options) error {
+		opts.pkgs["file"] = fileaddon.New()
 		return nil
 	})
 }

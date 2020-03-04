@@ -124,3 +124,5 @@ require (
 	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 	sigs.k8s.io/yaml v1.1.0
 )
+
+go 1.13
