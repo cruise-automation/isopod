@@ -1,0 +1,17 @@
+exclude: "^vendor/.*"
+repos:
+- repo: https://github.com/syntaqx/git-hooks
+  rev: v0.0.16
+  hooks:
+    - id: circleci-config-validate
+    - id: go-fmt
+- repo: git://github.com/PyCQA/pylint
+  rev: pylint-2.4.4
+  hooks:
+    - id: pylint
+      types: [file]  # Overrides types: [python]
+      files: \.(star|ipd)$
+- repo: git://github.com/pre-commit/pre-commit-hooks
+  rev: v2.5.0
+  hooks:
+    - id: trailing-whitespace

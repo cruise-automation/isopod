@@ -16,16 +16,16 @@
 
 
 def match(ctx):
-  print("match")
-  return True
+    print("match")
+    return True
 
 def status(ctx):
-  return ctx.cluster + " status"
+    return ctx.cluster + " status"
 
 def install(ctx):
-  if ctx.snafoo != None:
-    error("Non-existent context is not `None': {ctx}".format(ctx=ctx.snafoo))
-  print("install " + ctx.cluster)
+    if ctx.snafoo != None:
+        error("Non-existent context is not `None': {ctx}".format(ctx=ctx.snafoo))
+    print("install " + ctx.cluster)
 
 def remove(ctx):
-  print("remove " + ctx.cluster)
+    print("remove " + ctx.cluster)

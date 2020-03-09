@@ -20,14 +20,15 @@ metav1 = proto.package("k8s.io.apimachinery.pkg.apis.meta.v1")
 
 
 def install(ctx):
-  print("Installing ingress for cluster={cluster}...".format(cluster=ctx.cluster))
+    print("Installing ingress for cluster={cluster}...".format(cluster=ctx.cluster))
 
-  data = vault.read("secret/car/cert")
+    data = vault.read("secret/car/cert")
 
-  kube.put(
-    name = ctx.namespace,
-    data = [
-        corev1.Namespace(metadata=metav1.ObjectMeta(labels={"foo": "bar"})),
-    ])
+    kube.put(
+        name=ctx.namespace,
+        data=[
+            corev1.Namespace(metadata=metav1.ObjectMeta(labels={"foo": "bar"})),
+        ],
+    )
 
-  print("{a}".format(a=data["crt"]))
+    print("{a}".format(a=data["crt"]))

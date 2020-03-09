@@ -1,0 +1,34 @@
+[MASTER]
+
+disable=
+    missing-docstring,
+    undefined-variable,
+    assert-on-tuple,
+    invalid-name,
+    len-as-condition,
+    unused-argument,
+    duplicate-code,
+    no-member,
+    syntax-error,
+    fixme,
+    redefined-outer-name,
+    too-many-locals,
+    redefined-builtin,
+    too-many-arguments,
+    dangerous-default-value,
+    singleton-comparison,
+    superfluous-parens,
+    misplaced-comparison-constant,
+    anomalous-backslash-in-string,
+
+
+[FORMAT]
+
+# Maximum number of characters on a single line.
+max-line-length=120
+
+# Regexp for a line that is allowed to be longer than the limit.
+ignore-long-lines=^\s*(# )?<?https?://\S+>?$
+
+# Maximum number of lines in a single file.
+max-module-lines=2000

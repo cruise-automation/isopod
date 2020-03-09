@@ -17,11 +17,11 @@
 def install(ctx):
     print('Installing helm chart for cluster={cluster}...'.format(cluster=ctx.cluster))
 
-    globalValues="""
+    globalValues = """
 global:
     priorityClassName: "cluster-critical"
 """
-    pilotValues="""
+    pilotValues = """
 pilot:
     replicaCount: 3
     image: "docker.io/istio/pilot:v1.2.3"
