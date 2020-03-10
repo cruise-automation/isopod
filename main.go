@@ -37,11 +37,9 @@ import (
 var version = "<unknown>"
 
 var (
-	// required
-	vaultToken = flag.String("vault_token", os.Getenv("VAULT_TOKEN"), "Vault token obtained during authentication.")
-	namespace  = flag.String("namespace", "default", "Kubernetes namespace to store metadata in.")
-
 	// optional
+	vaultToken         = flag.String("vault_token", os.Getenv("VAULT_TOKEN"), "Vault token obtained during authentication.")
+	namespace          = flag.String("namespace", "default", "Kubernetes namespace to store metadata in.")
 	kubeconfig         = flag.String("kubeconfig", "", "Kubernetes client config path.")
 	addonRegex         = flag.String("match_addons", "", "Filters configured addons based on provided regex.")
 	isopodCtx          = flag.String("context", "", "Comma-separated list of `foo=bar' context parameters passed to the clusters Starlark function.")
@@ -57,9 +55,6 @@ var (
 
 func init() {
 	flag.Parse()
-	if *vaultToken == "" {
-		log.Fatalf("--vault_token or $VAULT_TOKEN must be set")
-	}
 }
 
 func usageAndDie() {
