@@ -71,7 +71,7 @@ hermetic, and extensible solution to configuration management in Kubernetes.
 
 ```shell
 $ go version
-go version go1.11 darwin/amd64
+go version go1.14 darwin/amd64
 $ GO111MODULE=on go build
 ```
 
