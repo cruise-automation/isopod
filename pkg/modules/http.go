@@ -12,118 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// package util implements helper built-ins.
-package util
+package modules
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
 
-	"github.com/google/uuid"
 	"go.starlark.net/starlark"
 
 	isopod "github.com/cruise-automation/isopod/pkg"
 	"github.com/cruise-automation/isopod/pkg/addon"
 )
-
-var (
-	seedUUID = uuid.MustParse("00000000-0000-0000-0000-000000000000")
-)
-
-// Predeclared returns a starlark.StringDict containing predeclared modules
-// from util:
-//   * base64 - Base64 encode/decode operations (RFC 4648).
-//   * uuid - UUID generate operations (RFC 4122).
-//   * http - HTTP calls.
-//   * struct - Starlark struct with to_json() support.
-func Predeclared() starlark.StringDict {
-	return starlark.StringDict{
-		"base64": NewBase64Module(),
-		"uuid":   NewUUIDModule(),
-		"http":   NewHTTPModule(),
-		"struct": starlark.NewBuiltin("struct", StructFn),
-	}
-}
-
-// NewBase64Module returns a base64 module.
-func NewBase64Module() *isopod.Module {
-	return &isopod.Module{
-		Name: "base64",
-		Attrs: map[string]starlark.Value{
-			"encode": starlark.NewBuiltin("base64.encode", base64EncodeFn),
-			"decode": starlark.NewBuiltin("base64.decode", base64DecodeFn),
-		},
-	}
-}
-
-// base64EncodeFn is a built-in to encode string arg in base64.
-func base64EncodeFn(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var v string
-	if err := starlark.UnpackPositionalArgs(b.Name(), args, nil, 1, &v); err != nil {
-		return nil, err
-	}
-
-	return starlark.String(base64.StdEncoding.EncodeToString([]byte(v))), nil
-}
-
-// base64DecodeFn is a built-in that decodes string from base64.
-func base64DecodeFn(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var v string
-	if err := starlark.UnpackPositionalArgs(b.Name(), args, nil, 1, &v); err != nil {
-		return nil, err
-	}
-
-	data, err := base64.StdEncoding.DecodeString(v)
-	if err != nil {
-		return nil, err
-	}
-
-	return starlark.String(string(data)), nil
-}
-
-// NewUUIDModule returns a uuid module.
-func NewUUIDModule() *isopod.Module {
-	return &isopod.Module{
-		Name: "uuid",
-		Attrs: map[string]starlark.Value{
-			"v3": starlark.NewBuiltin("uuid.v3", uuidGenerateV3Fn),
-			"v4": starlark.NewBuiltin("uuid.v4", uuidGenerateV4Fn),
-			"v5": starlark.NewBuiltin("uuid.v5", uuidGenerateV5Fn),
-		},
-	}
-}
-
-// uuidGenerateV3Fn is a built-in to generate type 3 UUID digest from input data.
-func uuidGenerateV3Fn(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var v string
-	if err := starlark.UnpackPositionalArgs(b.Name(), args, nil, 1, &v); err != nil {
-		return nil, err
-	}
-
-	result := uuid.NewMD5(seedUUID, []byte(v))
-	return starlark.String(result.String()), nil
-}
-
-// uuidGenerateV4Fn is a built-in to generate type 4 UUID.
-func uuidGenerateV4Fn(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	return starlark.String(uuid.New().String()), nil
-}
-
-// uuidGenerateV3Fn is a built-in to generate type 5 UUID digest from input data.
-func uuidGenerateV5Fn(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var v string
-	if err := starlark.UnpackPositionalArgs(b.Name(), args, nil, 1, &v); err != nil {
-		return nil, err
-	}
-
-	result := uuid.NewSHA1(seedUUID, []byte(v))
-	return starlark.String(result.String()), nil
-}
 
 // NewHTTPModule returns new Isopod built-in module for HTTP calls.
 // Supports these methods:

@@ -27,36 +27,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/cruise-automation/isopod/pkg/kpath"
 )
 
-// filterYamlField will traverse m and filter out all items with key matching
-// field. Will descend down into compound slice values if recurse is true.
-func filterYamlField(m yaml.MapSlice, field string, recurse bool) yaml.MapSlice {
-	var out yaml.MapSlice
-	for _, item := range m {
-		// Skip items that match field.
-		if f, ok := item.Key.(string); ok && f == field {
-			continue
-		}
-
-		if mm, ok := item.Value.(yaml.MapSlice); ok && recurse {
-			item = yaml.MapItem{
-				Key:   item.Key,
-				Value: filterYamlField(mm, field, recurse),
-			}
-		}
-
-		out = append(out, item)
-	}
-	return out
-}
-
-// renderObj renders obj into JSON or YAML (if renderYaml is true), while
-// stripping the output off of secrets, fields that are set by API Server
-// (SelfLink, UID, etc).
-// Also sets defaults.
-func renderObj(obj runtime.Object, gvk *schema.GroupVersionKind, renderYaml bool) (string, error) {
+// renderObj renders obj into JSON or YAML (if renderYaml is true).
+// Secrets are redacted. Scheme defaults are applied.
+// Fields set by built-in Kubernetes controllers (SelfLink, UID, etc) are filtered.
+// Custom filters in kpath syntax are applied from diffFilters (each string in the array is a separate filter).
+func renderObj(obj runtime.Object, gvk *schema.GroupVersionKind, renderYaml bool, diffFilters []string) (string, error) {
 	// Make sure secrets aren't leaked into logs/console.
 	if s, ok := obj.(*corev1.Secret); ok {
 		newSecret := s.DeepCopy()
@@ -69,18 +48,10 @@ func renderObj(obj runtime.Object, gvk *schema.GroupVersionKind, renderYaml bool
 		obj = newSecret
 	}
 
+	// apply defaults according to the global scheme of k8s objects
 	Scheme.Default(obj)
 
-	mObj, ok := obj.(metav1.Object)
-	if !ok {
-		return "", fmt.Errorf("object does not implement metav1.Object: %v", obj)
-	}
-
-	// Filter fields that would always differ.
-	mObj.SetSelfLink("")
-	mObj.SetUID("")
-	mObj.SetGeneration(0)
-
+	// convert Object to JSON
 	jsonBytes, err := json.MarshalIndent(obj, "", "\t")
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal to JSON: %v", err)
@@ -90,6 +61,7 @@ func renderObj(obj runtime.Object, gvk *schema.GroupVersionKind, renderYaml bool
 		return string(jsonBytes), nil
 	}
 
+	// convert JSON to MapSlice
 	var yamlMap yaml.MapSlice
 	if err := yaml.Unmarshal(jsonBytes, &yamlMap); err != nil {
 		return "", fmt.Errorf("failed to unmarshal to YAML: %v", err)
@@ -107,10 +79,26 @@ func renderObj(obj runtime.Object, gvk *schema.GroupVersionKind, renderYaml bool
 			yamlMap...)
 	}
 
-	yamlMap = filterYamlField(yamlMap, "creationTimestamp", true)
-	yamlMap = filterYamlField(yamlMap, "status", false)
-	yamlMap = filterYamlField(yamlMap, "serviceAccount", false)
+	// filter fields managed by built-in Kubernetes controllers
+	yamlMap = filterYaml(yamlMap, "metadata", "selfLink")
+	yamlMap = filterYaml(yamlMap, "metadata", "uid")
+	yamlMap = filterYaml(yamlMap, "metadata", "generation")
+	yamlMap = filterYaml(yamlMap, "metadata", "creationTimestamp")
+	yamlMap = filterYaml(yamlMap, "status")
 
+	// apply custom diff filters
+	for i := 0; i < len(diffFilters); i++ {
+		path, err := kpath.Split(diffFilters[i])
+		if err != nil {
+			return "", fmt.Errorf("failed to parse diff filter (\"%s\"): %v", diffFilters[i], err)
+		}
+		yamlMap = filterYaml(yamlMap, path...)
+	}
+
+	// reduce result (empty map/array => nil)
+	yamlMap = filterEmpty(yamlMap)
+
+	// convert MapSlice to YAML
 	yamlBytes, err := yaml.Marshal(yamlMap)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal YAML map: %v", err)
@@ -133,22 +121,30 @@ func maybeCore(group string) string {
 	return "." + group
 }
 
-// printUnifgiedDiff prints unified diff of live against head. Uses gvk and
-// name to prettify the diff.
+// printUnifiedDiff prints unified diff of live against head.
+// Uses gvk and name to prettify the diff.
 // If live is nil, just prints the right side.
-func printUnifiedDiff(w io.Writer, live, head runtime.Object, gvk schema.GroupVersionKind, name string) error {
+// Custom filters in kpath syntax are applied from diffFilters (each string in the array is a separate filter).
+func printUnifiedDiff(
+	w io.Writer,
+	live, head runtime.Object,
+	gvk schema.GroupVersionKind,
+	name string,
+	diffFilters []string,
+) error {
+
 	fullName := fmt.Sprintf("%s%s `%s'", strings.ToLower(gvk.Kind), maybeCore(gvk.Group), name)
 
 	var left string
 	if live != nil {
 		var err error
-		left, err = renderObj(live, nil, true)
+		left, err = renderObj(live, nil, true, diffFilters)
 		if err != nil {
 			return fmt.Errorf("failed to render :live object for %s: %v", fullName, err)
 		}
 	}
 
-	right, _ := renderObj(head, &gvk, true)
+	right, _ := renderObj(head, &gvk, true, diffFilters)
 
 	fmt.Fprintf(w, "\n*** %s ***\n", fullName)
 

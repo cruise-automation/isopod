@@ -35,8 +35,8 @@ import (
 	"github.com/cruise-automation/isopod/pkg/cloud/gke"
 	"github.com/cruise-automation/isopod/pkg/cloud/onprem"
 	"github.com/cruise-automation/isopod/pkg/loader"
+	"github.com/cruise-automation/isopod/pkg/modules"
 	"github.com/cruise-automation/isopod/pkg/store"
-	"github.com/cruise-automation/isopod/pkg/util"
 )
 
 const (
@@ -123,7 +123,7 @@ func New(c *Config, opts ...Option) (Runtime, error) {
 
 	pkgs := options.pkgs
 	pkgs["addon"] = addon.NewAddonBuiltin(filepath.Dir(c.EntryFile), options.pkgs)
-	for n, pkg := range util.Predeclared() {
+	for n, pkg := range modules.Predeclared() {
 		pkgs[n] = pkg
 	}
 

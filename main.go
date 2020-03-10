@@ -42,15 +42,17 @@ var (
 	namespace  = flag.String("namespace", "default", "Kubernetes namespace to store metadata in.")
 
 	// optional
-	kubeconfig     = flag.String("kubeconfig", "", "Kubernetes client config path.")
-	addonRegex     = flag.String("match_addons", "", "Filters configured addons based on provided regex.")
-	isopodCtx      = flag.String("context", "", "Comma-separated list of `foo=bar' context parameters passed to the clusters Starlark function.")
-	dryRun         = flag.Bool("dry_run", false, "Print intended actions but don't mutate anything.")
-	svcAcctKeyFile = flag.String("sa_key", "", "Path to the service account json file.")
-	noSpin         = flag.Bool("nospin", false, "Disables command line status spinner.")
-	kubeDiff       = flag.Bool("kube_diff", false, "Print diff against live Kubernetes objects.")
-	showVersion    = flag.Bool("version", false, "Print binary version/system information and exit(0).")
-	relativePath   = flag.String("rel_path", "", "The base path used to interpret double slash prefix.")
+	kubeconfig         = flag.String("kubeconfig", "", "Kubernetes client config path.")
+	addonRegex         = flag.String("match_addons", "", "Filters configured addons based on provided regex.")
+	isopodCtx          = flag.String("context", "", "Comma-separated list of `foo=bar' context parameters passed to the clusters Starlark function.")
+	dryRun             = flag.Bool("dry_run", false, "Print intended actions but don't mutate anything.")
+	svcAcctKeyFile     = flag.String("sa_key", "", "Path to the service account json file.")
+	noSpin             = flag.Bool("nospin", false, "Disables command line status spinner.")
+	kubeDiff           = flag.Bool("kube_diff", false, "Print diff against live Kubernetes objects.")
+	kubeDiffFilter     = util.StringsFlag("kube_diff_filter", []string{}, "Filter elements in diffs using JSONPath key matching.")
+	kubeDiffFilterFile = flag.String("kube_diff_filter_file", "", "Path to a file of filters delimited by new lines.")
+	showVersion        = flag.Bool("version", false, "Print binary version/system information and exit(0).")
+	relativePath       = flag.String("rel_path", "", "The base path used to interpret double slash prefix.")
 )
 
 func init() {
@@ -129,9 +131,21 @@ func buildAddonsRuntime(kubeC *rest.Config, mainFile string) (runtime.Runtime, e
 		helmBaseDir = filepath.Dir(mainFile)
 	}
 	st := store.New(cs, *namespace)
+
+	var diffFilters []string
+	if *kubeDiffFilterFile != "" {
+		diffFilters, err = util.LoadFilterFile(*kubeDiffFilterFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load diff filters: %v", err)
+		}
+	}
+	if len(*kubeDiffFilter) > 0 {
+		diffFilters = append(diffFilters, (*kubeDiffFilter)...)
+	}
+
 	opts := []runtime.Option{
 		runtime.WithVault(vaultC),
-		runtime.WithKube(kubeC, *kubeDiff),
+		runtime.WithKube(kubeC, *kubeDiff, diffFilters),
 		runtime.WithHelm(helmBaseDir),
 		runtime.WithAddonRegex(regexp.MustCompile(*addonRegex)),
 	}

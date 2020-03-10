@@ -108,7 +108,7 @@ func (*protoRegistry) UnstableEnumValueMap(name string) map[string]int32 {
 }
 
 // WithKube returns an Option that enables "kube" package.
-func WithKube(c *rest.Config, diff bool) Option {
+func WithKube(c *rest.Config, diff bool, diffFilters []string) Option {
 	return fnOption(func(opts *options) error {
 		dC := discovery.NewDiscoveryClientForConfigOrDie(c)
 
@@ -122,7 +122,7 @@ func WithKube(c *rest.Config, diff bool) Option {
 			return err
 		}
 
-		opts.pkgs["kube"] = kube.New(c.Host, dC, dynC, &http.Client{Transport: t}, opts.dryRun, diff)
+		opts.pkgs["kube"] = kube.New(c.Host, dC, dynC, &http.Client{Transport: t}, opts.dryRun, diff, diffFilters)
 		pkgs := skycfg.UnstablePredeclaredModules(&protoRegistry{})
 		for name, pkg := range pkgs {
 			opts.pkgs[name] = pkg
