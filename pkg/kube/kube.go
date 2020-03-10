@@ -56,10 +56,12 @@ const (
 // kubePackage implements Kubernetes package that can be imported by plugin
 // code.
 type kubePackage struct {
-	dClient      discovery.DiscoveryInterface
-	dynClient    dynamic.Interface
-	httpClient   *http.Client
-	dryRun, diff bool
+	dClient     discovery.DiscoveryInterface
+	dynClient   dynamic.Interface
+	httpClient  *http.Client
+	dryRun      bool
+	diff        bool
+	diffFilters []string
 	// host:port of the master endpoint.
 	Master string
 }
@@ -69,16 +71,19 @@ func New(
 	addr string,
 	d discovery.DiscoveryInterface,
 	dynC dynamic.Interface,
-	c *http.Client, dryRun,
-	diff bool) starlark.HasAttrs {
+	c *http.Client,
+	dryRun, diff bool,
+	diffFilters []string,
+) starlark.HasAttrs {
 
 	return &kubePackage{
-		dClient:    d,
-		dynClient:  dynC,
-		httpClient: c,
-		Master:     addr,
-		dryRun:     dryRun,
-		diff:       diff,
+		dClient:     d,
+		dynClient:   dynC,
+		httpClient:  c,
+		Master:      addr,
+		dryRun:      dryRun,
+		diff:        diff,
+		diffFilters: diffFilters,
 	}
 }
 
@@ -658,7 +663,7 @@ func (m *kubePackage) kubeUpdate(ctx context.Context, r *apiResource, msg proto.
 	log.V(1).Infof("%s to %s", method, url)
 
 	if log.V(2) {
-		s, err := renderObj(msg.(runtime.Object), &r.GVK, bool(log.V(3)) /* If --v=3, only return JSON. */)
+		s, err := renderObj(msg.(runtime.Object), &r.GVK, bool(log.V(3)) /* If --v=3, only return JSON. */, m.diffFilters)
 		if err != nil {
 			return fmt.Errorf("failed to render :live object for %s: %v", r.String(), err)
 		}
@@ -667,13 +672,13 @@ func (m *kubePackage) kubeUpdate(ctx context.Context, r *apiResource, msg proto.
 	}
 
 	if m.diff {
-		if err := printUnifiedDiff(os.Stdout, live, msg.(runtime.Object), r.GVK, r.String()); err != nil {
+		if err := printUnifiedDiff(os.Stdout, live, msg.(runtime.Object), r.GVK, r.String(), m.diffFilters); err != nil {
 			return err
 		}
 	}
 
 	if m.dryRun {
-		return printUnifiedDiff(os.Stdout, live, msg.(runtime.Object), r.GVK, r.String())
+		return printUnifiedDiff(os.Stdout, live, msg.(runtime.Object), r.GVK, r.String(), m.diffFilters)
 	}
 
 	resp, err := m.httpClient.Do(req.WithContext(ctx))

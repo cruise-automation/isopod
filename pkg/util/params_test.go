@@ -18,6 +18,8 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+
+	_ "github.com/golang/glog"
 )
 
 func TestParseCommaSeparatedParams(t *testing.T) {

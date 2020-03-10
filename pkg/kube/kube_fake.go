@@ -426,7 +426,15 @@ func NewFake() (m starlark.HasAttrs, closeFn func(), err error) {
 		return nil, nil, err
 	}
 
-	k := New(h, fakeDiscovery(), dynamic.NewForConfigOrDie(rConf), &http.Client{Transport: t}, false /* dryRun */, false /* diff */)
+	k := New(
+		h,
+		fakeDiscovery(),
+		dynamic.NewForConfigOrDie(rConf),
+		&http.Client{Transport: t},
+		false, /* dryRun */
+		false, /* diff */
+		nil,   /* diffFilters */
+	)
 
 	return newFakeModule(k.(*kubePackage)), s.Close, nil
 }

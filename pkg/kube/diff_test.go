@@ -98,6 +98,10 @@ func TestDiff(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					CreationTimestamp: now,
+					Annotations: map[string]string{
+						"isopod.getcruise.com/context":      "any value",
+						"deployment.kubernetes.io/revision": "3",
+					},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -134,7 +138,7 @@ func TestDiff(t *testing.T) {
 				"*** pod.v1 `foobar' ***",
 				"--- live",
 				"+++ head",
-				"@@ -4,12 +4,12 @@",
+				"@@ -3,12 +3,12 @@",
 				" spec:",
 				"   containers:",
 				"   - name: nginx",
@@ -155,7 +159,14 @@ func TestDiff(t *testing.T) {
 		var rw bytes.Buffer
 
 		t.Run(tc.name, func(t *testing.T) {
-			err := printUnifiedDiff(&rw, tc.live, tc.head, tc.live.(runtime.Object).GetObjectKind().GroupVersionKind(), "foobar")
+			diffFilters := []string{
+				`metadata.annotations["isopod.getcruise.com/context"]`,
+				`metadata.annotations["deployment.kubernetes.io/revision"]`,
+				`metadata.annotations["autoscaling.alpha.kubernetes.io/conditions"]`,
+				`metadata.annotations["cloud.google.com/neg-status"]`,
+				`spec.template.spec.serviceAccount`,
+			}
+			err := printUnifiedDiff(&rw, tc.live, tc.head, tc.live.(runtime.Object).GetObjectKind().GroupVersionKind(), "foobar", diffFilters)
 			if err != nil {
 				t.Fatalf("Failed to write diff: %v", err)
 			}

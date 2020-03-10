@@ -101,7 +101,7 @@ func (m *kubePackage) Apply(t *starlark.Thread, name, namespace string, data *st
 		r, err := newResourceForKind(m.dClient, name, namespace, "", *gvk)
 		if err != nil {
 			if _, ok := err.(*meta.NoKindMatchError); ok && m.dryRun {
-				if err := printUnifiedDiff(os.Stdout, nil, obj, *gvk, maybeNamespaced(name, namespace)); err != nil {
+				if err := printUnifiedDiff(os.Stdout, nil, obj, *gvk, maybeNamespaced(name, namespace), m.diffFilters); err != nil {
 					return nil, err
 				}
 				return starlark.None, nil
@@ -154,7 +154,7 @@ func (m *kubePackage) kubeUpdateYaml(ctx context.Context, r *apiResource, obj ru
 	}
 
 	if m.dryRun {
-		return printUnifiedDiff(os.Stdout, live, obj, r.GVK, maybeNamespaced(r.Name, r.Namespace))
+		return printUnifiedDiff(os.Stdout, live, obj, r.GVK, maybeNamespaced(r.Name, r.Namespace), m.diffFilters)
 	}
 
 	var c dynamic.ResourceInterface = m.dynClient.Resource(r.GroupVersionResource())
@@ -163,7 +163,7 @@ func (m *kubePackage) kubeUpdateYaml(ctx context.Context, r *apiResource, obj ru
 	}
 
 	if log.V(2) {
-		s, err := renderObj(obj, &r.GVK, bool(log.V(3)) /* If --v=3, only return JSON. */)
+		s, err := renderObj(obj, &r.GVK, bool(log.V(3)) /* If --v=3, only return JSON. */, m.diffFilters)
 		if err != nil {
 			return fmt.Errorf("failed to render :live object for %v: %v", r, err)
 		}

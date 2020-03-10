@@ -35,7 +35,7 @@ import (
 	"github.com/cruise-automation/isopod/pkg/cloud/onprem"
 	"github.com/cruise-automation/isopod/pkg/kube"
 	"github.com/cruise-automation/isopod/pkg/loader"
-	"github.com/cruise-automation/isopod/pkg/util"
+	"github.com/cruise-automation/isopod/pkg/modules"
 	"github.com/cruise-automation/isopod/pkg/vault"
 )
 
@@ -174,7 +174,7 @@ func exec(ctx context.Context, path string) (*result, error) {
 	}
 
 	// Must be loaded last to ensure our impl of struct() persists.
-	for k, v := range util.Predeclared() {
+	for k, v := range modules.Predeclared() {
 		pkgs[k] = v
 	}
 
