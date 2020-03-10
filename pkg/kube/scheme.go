@@ -54,6 +54,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 
 	// Import serializer extensions.
 	_ "k8s.io/apimachinery/pkg/runtime/serializer/protobuf"
@@ -98,6 +99,7 @@ var (
 		storagev1.AddToScheme,
 		storagev1alpha1.AddToScheme,
 		vpav1beta2.AddToScheme,
+		apiregistrationv1beta1.AddToScheme,
 	}
 )
 

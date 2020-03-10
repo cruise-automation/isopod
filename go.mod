@@ -117,6 +117,7 @@ require (
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
 	k8s.io/helm v2.14.3+incompatible
 	k8s.io/klog v0.3.0 // indirect
+	k8s.io/kube-aggregator v0.0.0-20191015220746-1fa97e0b871d
 	k8s.io/kube-openapi v0.0.0-20190418160015-6b3d3b2d5666 // indirect
 	k8s.io/kubernetes v1.14.1
 	k8s.io/utils v0.0.0-20190212002617-cdba02414f76 // indirect
