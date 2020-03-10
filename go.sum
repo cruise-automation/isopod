@@ -411,6 +411,8 @@ k8s.io/helm v2.14.3+incompatible/go.mod h1:LZzlS4LQBHfciFOurYBFkCMTaZ0D1l+p0teMg
 k8s.io/klog v0.0.0-20181102134211-b9b56d5dfc92/go.mod h1:Gq+BEi5rUBO/HRz0bTSXDUcqjScdoY3a9IHpCEIOOfk=
 k8s.io/klog v0.3.0 h1:0VPpR+sizsiivjIfIAQH/rl8tan6jvWkS7lU+0di3lE=
 k8s.io/klog v0.3.0/go.mod h1:Gq+BEi5rUBO/HRz0bTSXDUcqjScdoY3a9IHpCEIOOfk=
+k8s.io/kube-aggregator v0.0.0-20191015220746-1fa97e0b871d h1:Ha/GOk9vffoShfKVHZtQ5llvLUxWpwxDTXJYpbBruGw=
+k8s.io/kube-aggregator v0.0.0-20191015220746-1fa97e0b871d/go.mod h1:8sbzT4QQKDEmSCIbfqjV0sd97GpUT7A4W626sBiYJmU=
 k8s.io/kube-openapi v0.0.0-20190418160015-6b3d3b2d5666 h1:hlzz2EvLPcefAcG/j0tOZpds4LWSElZzxpZuhxbblbc=
 k8s.io/kube-openapi v0.0.0-20190418160015-6b3d3b2d5666/go.mod h1:jqYp7BKXW0Jl+F1dWXBieUmcHKMPpGHGWA0uqfpOZZ4=
 k8s.io/kubernetes v1.14.1 h1:I9F52h5sqVxBmoSsBlNQ0YygNcukDilkpGxUbJRoBoY=
