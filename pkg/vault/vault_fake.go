@@ -121,5 +121,6 @@ func NewFake() (m starlark.HasAttrs, closeFn func(), err error) {
 	if err != nil {
 		return nil, s.Close, err
 	}
+	c.SetToken("fake_token")
 	return New(c), s.Close, nil
 }

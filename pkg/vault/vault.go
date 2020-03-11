@@ -19,6 +19,7 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -28,6 +29,10 @@ import (
 	isopod "github.com/cruise-automation/isopod/pkg"
 	"github.com/cruise-automation/isopod/pkg/addon"
 	"github.com/cruise-automation/isopod/pkg/util"
+)
+
+var (
+	ErrNoToken = errors.New("tried to access Vault but token is empty. Please set --vault_token or $VAULT_TOKEN")
 )
 
 // vaultPackage implements Vault API package.
@@ -61,6 +66,9 @@ func New(c *vault.Client) *isopod.Module {
 //   values = vault.read(path)
 //   print(values['foo'])
 func (p *vaultPackage) vaultReadFn(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	if err := p.assertToken(); err != nil {
+		return nil, err
+	}
 	var path string
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 1, &path); err != nil {
 		return nil, fmt.Errorf("<%v>: failed to parse args: %v", b.Name(), err)
@@ -100,6 +108,9 @@ func (p *vaultPackage) vaultReadFn(t *starlark.Thread, b *starlark.Builtin, args
 //   values = vault.read_raw(path)
 //   print(values['foo'])
 func (p *vaultPackage) vaultReadRawFn(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	if err := p.assertToken(); err != nil {
+		return nil, err
+	}
 	var path string
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 1, &path); err != nil {
 		return nil, fmt.Errorf("<%v>: failed to parse args: %v", b.Name(), err)
@@ -137,6 +148,9 @@ func (p *vaultPackage) vaultReadRawFn(t *starlark.Thread, b *starlark.Builtin, a
 //   data = vault.read(path)
 //   print(data['key1']) == repr(value1) # Must be True
 func (p *vaultPackage) vaultWriteFn(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	if err := p.assertToken(); err != nil {
+		return nil, err
+	}
 	var path string
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, nil, 1, &path); err != nil {
 		return nil, fmt.Errorf("<%v>: failed to parse args: %v", b.Name(), err)
@@ -200,6 +214,9 @@ func (p *vaultPackage) vaultWriteFn(t *starlark.Thread, b *starlark.Builtin, arg
 //	 if ok:
 //	 	print(path + " exists on vault.")
 func (p *vaultPackage) vaultExistFn(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	if err := p.assertToken(); err != nil {
+		return nil, err
+	}
 	var path string
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 1, &path); err != nil {
 		return nil, fmt.Errorf("<%v>: failed to parse args: %v", b.Name(), err)
@@ -219,6 +236,14 @@ func (p *vaultPackage) vaultExistFn(t *starlark.Thread, b *starlark.Builtin, arg
 	}
 
 	return starlark.True, nil
+}
+
+// assertToken ensures that vault is only accessed if a token is set
+func (p *vaultPackage) assertToken() (err error) {
+	if p.client.Token() == "" {
+		return ErrNoToken
+	}
+	return
 }
 
 // ReadVaultPath takes in the Vault path and returns the value as a string.
