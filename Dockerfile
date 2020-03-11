@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.11.4-alpine3.8 as builder
+FROM golang:1.14.0-alpine3.11 as builder
 
 WORKDIR /build
 COPY . /build
@@ -20,7 +20,7 @@ COPY . /build
 RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -mod=vendor
 
 
-FROM alpine:latest
+FROM gcr.io/distroless/base
 
 WORKDIR /cruise/paas/bin
 COPY --from=builder /build/isopod .

@@ -2,7 +2,7 @@ version: 2
 
 golang-docker-base-image: &golang-docker-base-image
   docker:
-    - image: circleci/golang:1.12.7
+    - image: cimg/go:1.14
       environment:
         GO111MODULE: "on"
         CGO_ENABLED: 0
