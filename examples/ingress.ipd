@@ -24,6 +24,7 @@ intstr = proto.package("k8s.io.apimachinery.pkg.util.intstr")
 
 load("helpers.ipd", "env_from_secret", "container_port",
      "health_probe", "env_from_field", "env", "rolling_update_dep")
+load("fake-tls.star", "fake_tls")
 
 name_prefix = "internal-nginx-ingress"
 namespace = "ingress"
@@ -41,7 +42,12 @@ def install(ctx):
         data=[corev1.Namespace(metadata=metav1.ObjectMeta(name=namespace))],
     )
 
-    tls = vault.read("secret/piedpiper.com")
+    # You may read TLS config from Vault, such as:
+    #
+    #     tls = vault.read("secret/piedpiper.com")
+    # 
+    # Here, we use a fake value to implement a runnable example without access to Vault.
+    tls = fake_tls
 
     kube.put(
         name="piedpiper.com",

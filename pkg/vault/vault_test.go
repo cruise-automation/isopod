@@ -20,6 +20,7 @@ import (
 	"go.starlark.net/starlark"
 
 	util "github.com/cruise-automation/isopod/pkg/testing"
+	vaultapi "github.com/hashicorp/vault/api"
 )
 
 func TestVault(t *testing.T) {
@@ -84,5 +85,21 @@ func TestVault(t *testing.T) {
 			}
 
 		})
+	}
+}
+
+func TestVaultPackage_AssertToken(t *testing.T) {
+	c, _ := vaultapi.NewClient(nil)
+	v := &vaultPackage{
+		client: c,
+	}
+	err := v.assertToken()
+	if err != ErrNoToken {
+		t.Fatalf("Unexpected error.\nWant: %#v\nGot: %#v", ErrNoToken, err)
+	}
+	c.SetToken("fake_token")
+	err = v.assertToken()
+	if err != nil {
+		t.Fatalf("Unexpected error.\nWant: %#v\nGot: %#v", nil, err)
 	}
 }
