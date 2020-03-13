@@ -107,6 +107,67 @@ func renderObj(obj runtime.Object, gvk *schema.GroupVersionKind, renderYaml bool
 	return string(yamlBytes), nil
 }
 
+// removeSpuriousDiff implements conditional field removal from live and/or head
+// object depending on the value of the field and the difference between live
+// and head. This behavior differs from that of using the
+// diffFilters, which is unconditional removal.
+//
+// Specifically, this function removes:
+// * Master-assigned NodePort on Live object if head does not specify a NodePort.
+// * Kubernetes namespace finalizer on live and head objects.
+func removeSpuriousDiff(live, head runtime.Object) (newLive, newHead runtime.Object) {
+	newLive, newHead = live.DeepCopyObject(), head.DeepCopyObject()
+	removeSpuriousNodePortDiff(&newLive, &newHead)
+	removeSpuriousNamespaceFinalizerDiff(&newLive, &newHead)
+	return
+}
+
+func removeSpuriousNodePortDiff(live, head *runtime.Object) {
+	liveSvc, ok1 := (*live).(*corev1.Service)
+	headSvc, ok2 := (*head).(*corev1.Service)
+	if !ok1 || !ok2 {
+		return
+	}
+
+	for i, livePort := range liveSvc.Spec.Ports {
+		for _, headPort := range headSvc.Spec.Ports {
+			if livePort.Name == headPort.Name && livePort.NodePort != 0 && headPort.NodePort == 0 {
+				liveSvc.Spec.Ports[i].NodePort = 0
+				break
+			}
+		}
+	}
+
+	*live = liveSvc
+	*head = headSvc
+}
+
+func removeSpuriousNamespaceFinalizerDiff(live, head *runtime.Object) {
+	liveNS, ok1 := (*live).(*corev1.Namespace)
+	headNS, ok2 := (*head).(*corev1.Namespace)
+	if !ok1 || !ok2 {
+		return
+	}
+
+	removeFinalizerKubernetes := func(ns *corev1.Namespace) {
+		idx := -1
+		for i, finalizer := range ns.Spec.Finalizers {
+			if finalizer == corev1.FinalizerKubernetes {
+				idx = i
+				break
+			}
+		}
+		if idx != -1 {
+			ns.Spec.Finalizers = append(ns.Spec.Finalizers[:idx], ns.Spec.Finalizers[idx+1:]...)
+		}
+	}
+
+	removeFinalizerKubernetes(liveNS)
+	removeFinalizerKubernetes(headNS)
+	*live = liveNS
+	*head = headNS
+}
+
 func maybeNamespaced(name, ns string) string {
 	if ns != "" {
 		return ns + "/" + name
@@ -132,6 +193,7 @@ func printUnifiedDiff(
 	name string,
 	diffFilters []string,
 ) error {
+	live, head = removeSpuriousDiff(live, head)
 
 	fullName := fmt.Sprintf("%s%s `%s'", strings.ToLower(gvk.Kind), maybeCore(gvk.Group), name)
 
