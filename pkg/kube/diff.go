@@ -123,6 +123,10 @@ func removeSpuriousDiff(live, head runtime.Object) (newLive, newHead runtime.Obj
 }
 
 func removeSpuriousNodePortDiff(live, head *runtime.Object) {
+	if live == nil || head == nil {
+		return
+	}
+
 	liveSvc, ok1 := (*live).(*corev1.Service)
 	headSvc, ok2 := (*head).(*corev1.Service)
 	if !ok1 || !ok2 {
@@ -131,8 +135,10 @@ func removeSpuriousNodePortDiff(live, head *runtime.Object) {
 
 	for i, livePort := range liveSvc.Spec.Ports {
 		for _, headPort := range headSvc.Spec.Ports {
-			if livePort.Name == headPort.Name && livePort.NodePort != 0 && headPort.NodePort == 0 {
-				liveSvc.Spec.Ports[i].NodePort = 0
+			if livePort.Name == headPort.Name {
+				if livePort.NodePort != 0 && headPort.NodePort == 0 {
+					liveSvc.Spec.Ports[i].NodePort = 0
+				}
 				break
 			}
 		}
@@ -143,13 +149,20 @@ func removeSpuriousNodePortDiff(live, head *runtime.Object) {
 }
 
 func removeSpuriousNamespaceFinalizerDiff(live, head *runtime.Object) {
+	if live == nil || head == nil {
+		return
+	}
+
 	liveNS, ok1 := (*live).(*corev1.Namespace)
 	headNS, ok2 := (*head).(*corev1.Namespace)
 	if !ok1 || !ok2 {
 		return
 	}
 
-	removeFinalizerKubernetes := func(ns *corev1.Namespace) {
+	// removeKubernetesFinalizer will delete the Kuberenetes finalizer on the
+	// given namespace and leave other finalizers in place. This removal is
+	// okay because the Kuberenetes finalizer is added by default.
+	removeKubernetesFinalizer := func(ns *corev1.Namespace) {
 		idx := -1
 		for i, finalizer := range ns.Spec.Finalizers {
 			if finalizer == corev1.FinalizerKubernetes {
@@ -162,8 +175,8 @@ func removeSpuriousNamespaceFinalizerDiff(live, head *runtime.Object) {
 		}
 	}
 
-	removeFinalizerKubernetes(liveNS)
-	removeFinalizerKubernetes(headNS)
+	removeKubernetesFinalizer(liveNS)
+	removeKubernetesFinalizer(headNS)
 	*live = liveNS
 	*head = headNS
 }
