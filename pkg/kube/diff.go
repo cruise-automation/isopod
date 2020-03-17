@@ -117,18 +117,14 @@ func renderObj(obj runtime.Object, gvk *schema.GroupVersionKind, renderYaml bool
 // * Kubernetes namespace finalizer on live and head objects.
 func removeSpuriousDiff(live, head runtime.Object) (newLive, newHead runtime.Object) {
 	newLive, newHead = live.DeepCopyObject(), head.DeepCopyObject()
-	removeSpuriousNodePortDiff(&newLive, &newHead)
-	removeSpuriousNamespaceFinalizerDiff(&newLive, &newHead)
+	removeSpuriousNodePortDiff(newLive, newHead)
+	removeSpuriousNamespaceFinalizerDiff(newLive, newHead)
 	return
 }
 
-func removeSpuriousNodePortDiff(live, head *runtime.Object) {
-	if live == nil || head == nil {
-		return
-	}
-
-	liveSvc, ok1 := (*live).(*corev1.Service)
-	headSvc, ok2 := (*head).(*corev1.Service)
+func removeSpuriousNodePortDiff(live, head runtime.Object) {
+	liveSvc, ok1 := live.(*corev1.Service)
+	headSvc, ok2 := head.(*corev1.Service)
 	if !ok1 || !ok2 {
 		return
 	}
@@ -143,18 +139,11 @@ func removeSpuriousNodePortDiff(live, head *runtime.Object) {
 			}
 		}
 	}
-
-	*live = liveSvc
-	*head = headSvc
 }
 
-func removeSpuriousNamespaceFinalizerDiff(live, head *runtime.Object) {
-	if live == nil || head == nil {
-		return
-	}
-
-	liveNS, ok1 := (*live).(*corev1.Namespace)
-	headNS, ok2 := (*head).(*corev1.Namespace)
+func removeSpuriousNamespaceFinalizerDiff(live, head runtime.Object) {
+	liveNS, ok1 := live.(*corev1.Namespace)
+	headNS, ok2 := head.(*corev1.Namespace)
 	if !ok1 || !ok2 {
 		return
 	}
@@ -177,8 +166,6 @@ func removeSpuriousNamespaceFinalizerDiff(live, head *runtime.Object) {
 
 	removeKubernetesFinalizer(liveNS)
 	removeKubernetesFinalizer(headNS)
-	*live = liveNS
-	*head = headNS
 }
 
 func maybeNamespaced(name, ns string) string {
