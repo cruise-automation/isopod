@@ -117,6 +117,9 @@ func renderObj(obj runtime.Object, gvk *schema.GroupVersionKind, renderYaml bool
 // * Kubernetes namespace finalizer on live and head objects.
 // * Master-assigned ServiceAccount token secret in the live ServiceAccount.
 func removeSpuriousDiff(live, head runtime.Object) (newLive, newHead runtime.Object) {
+	if live == nil || head == nil {
+		return live, head
+	}
 	newLive, newHead = live.DeepCopyObject(), head.DeepCopyObject()
 	removeSpuriousNodePortDiff(newLive, newHead)
 	removeSpuriousNamespaceFinalizerDiff(newLive, newHead)
