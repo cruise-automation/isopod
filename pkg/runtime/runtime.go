@@ -84,11 +84,11 @@ type Runtime interface {
 type runtime struct {
 	Config
 	// filename string
-	globals starlark.StringDict
-	pkgs    starlark.StringDict // Predeclared packages.
-	addonRe *regexp.Regexp
-	store   store.Store
-	noSpin  bool
+	globals        starlark.StringDict
+	pkgs           starlark.StringDict // Predeclared packages.
+	addonRe        *regexp.Regexp
+	store          store.Store
+	noSpin, dryrun bool
 }
 
 func init() {
@@ -133,6 +133,7 @@ func New(c *Config, opts ...Option) (Runtime, error) {
 		addonRe: options.addonRe,
 		store:   c.Store,
 		noSpin:  options.noSpin,
+		dryrun:  options.dryRun,
 	}, nil
 }
 
@@ -203,14 +204,8 @@ func (r *runtime) runCommand(ctx context.Context, cmd Command, addons []*addon.A
 		// TODO(dmitry-ilyevskiy): Print "live" status.
 		fmt.Printf("Configured addons:\n\t%s\n", strings.Join(lstMsgs, "\n\t"))
 	case InstallCommand:
-		rollout, err := r.store.CreateRollout()
-		if err != nil {
-			return fmt.Errorf("failed to initilize rollout state: %v", err)
-		}
 
-		fmt.Printf("Beginning rollout [%v] installation...\n", rollout.ID)
-
-		if err := runUntilErr(addons, func(a *addon.Addon) (err error) {
+		installAddonFn := func(a *addon.Addon) (err error) {
 			if !r.noSpin {
 				doneCh := make(chan *runStatus)
 
@@ -243,11 +238,28 @@ func (r *runtime) runCommand(ctx context.Context, cmd Command, addons []*addon.A
 
 				go spinMsg(a.Name, doneCh)
 			}
+			return a.Install(ctx)
+		}
 
-			if err := a.Install(ctx); err != nil {
+		if r.dryrun {
+			if err := runUntilErr(addons, installAddonFn); err != nil {
+				return fmt.Errorf("failed addon installation: %v", err)
+			}
+			return nil
+		}
+
+		// Only create a rollout when not doing dryrun.
+		rollout, err := r.store.CreateRollout()
+		if err != nil {
+			return fmt.Errorf("failed to initilize rollout state: %v", err)
+		}
+
+		fmt.Printf("Beginning rollout [%v] installation...\n", rollout.ID)
+
+		if err := runUntilErr(addons, func(a *addon.Addon) (err error) {
+			if err := installAddonFn(a); err != nil {
 				return err
 			}
-
 			if _, err := r.store.PutAddonRun(rollout.ID, &store.AddonRun{
 				Name:    a.Name,
 				Modules: a.LoadedModules(),
@@ -255,7 +267,7 @@ func (r *runtime) runCommand(ctx context.Context, cmd Command, addons []*addon.A
 			}); err != nil {
 				return fmt.Errorf("failed to store run state for `%s' addon: %v", a.Name, err)
 			}
-			return err
+			return nil
 		}); err != nil {
 			return fmt.Errorf("failed addon installation: %v", err)
 		}
