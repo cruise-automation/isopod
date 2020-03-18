@@ -672,13 +672,13 @@ func (m *kubePackage) kubeUpdate(ctx context.Context, r *apiResource, msg proto.
 	}
 
 	if m.diff {
-		if err := printUnifiedDiff(os.Stdout, live, msg.(runtime.Object), r.GVK, r.String(), m.diffFilters); err != nil {
+		if err := printUnifiedDiff(os.Stdout, live, msg.(runtime.Object), r.GVK, maybeNamespaced(r.Name, r.Namespace), m.diffFilters); err != nil {
 			return err
 		}
 	}
 
 	if m.dryRun {
-		return printUnifiedDiff(os.Stdout, live, msg.(runtime.Object), r.GVK, r.String(), m.diffFilters)
+		return printUnifiedDiff(os.Stdout, live, msg.(runtime.Object), r.GVK, maybeNamespaced(r.Name, r.Namespace), m.diffFilters)
 	}
 
 	resp, err := m.httpClient.Do(req.WithContext(ctx))
