@@ -115,10 +115,12 @@ func renderObj(obj runtime.Object, gvk *schema.GroupVersionKind, renderYaml bool
 // Specifically, this function removes:
 // * Master-assigned NodePort on Live object if head does not specify a NodePort.
 // * Kubernetes namespace finalizer on live and head objects.
+// * Master-assigned ServiceAccount token secret in the live ServiceAccount.
 func removeSpuriousDiff(live, head runtime.Object) (newLive, newHead runtime.Object) {
 	newLive, newHead = live.DeepCopyObject(), head.DeepCopyObject()
 	removeSpuriousNodePortDiff(newLive, newHead)
 	removeSpuriousNamespaceFinalizerDiff(newLive, newHead)
+	removeSpuriousServiceAccountTokenDiff(newLive)
 	return
 }
 
@@ -166,6 +168,28 @@ func removeSpuriousNamespaceFinalizerDiff(live, head runtime.Object) {
 
 	removeKubernetesFinalizer(liveNS)
 	removeKubernetesFinalizer(headNS)
+}
+
+// removeSpuriousServiceAccountTokenDiff deletes the service account token
+// from the list of secrets that the serice account has access to. This token
+// is created and injected by the Kubernetes master and not defined in user
+// config.
+func removeSpuriousServiceAccountTokenDiff(live runtime.Object) {
+	liveSA, ok := live.(*corev1.ServiceAccount)
+	if !ok {
+		return
+	}
+
+	idx := -1
+	for i, secret := range liveSA.Secrets {
+		if strings.Contains(secret.Name, liveSA.Name+"-token") {
+			idx = i
+			break
+		}
+	}
+	if idx != -1 {
+		liveSA.Secrets = append(liveSA.Secrets[:idx], liveSA.Secrets[idx+1:]...)
+	}
 }
 
 func maybeNamespaced(name, ns string) string {
