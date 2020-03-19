@@ -15,10 +15,11 @@
 package runtime
 
 import (
-	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
+	golog "log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -155,31 +156,20 @@ func (r *runtime) Load(ctx context.Context) error {
 	return nil
 }
 
-type runStatus struct {
-	err    error
-	msgs   []string
-	doneCh chan struct{}
-}
-
-// spinMsg prints spinner while waiting on doneCh to return status, then exits.
-// Closes doneCh on exit.
-func spinMsg(addonName string, doneCh chan *runStatus) {
+// spinMsg prints spinner while waiting on errCh to return error, then exits.
+func spinMsg(addonName string, errCh chan error) {
 	s := spin.New()
 	s.Set(spin.Spin1)
 	for {
 		select {
 		case <-time.After(100 * time.Millisecond):
 			fmt.Printf("\r Installing %s... %s", addonName, s.Next())
-		case s := <-doneCh:
-			defer close(s.doneCh)
-
-			if s.err != nil {
-				fmt.Printf("\r Installing %s... err: %v\n", addonName, s.err)
+		case err := <-errCh:
+			if err != nil {
+				fmt.Printf("\r Installing %s... err: %v\n", addonName, err)
 			} else {
 				fmt.Printf("\r Installing %s... done\n", addonName)
 			}
-			fmt.Printf("\t%s\n", strings.Join(s.msgs, "\n\t"))
-
 			return
 		}
 	}
@@ -203,42 +193,64 @@ func (r *runtime) runCommand(ctx context.Context, cmd Command, addons []*addon.A
 		}
 		// TODO(dmitry-ilyevskiy): Print "live" status.
 		fmt.Printf("Configured addons:\n\t%s\n", strings.Join(lstMsgs, "\n\t"))
+
 	case InstallCommand:
-
 		installAddonFn := func(a *addon.Addon) (err error) {
-			if !r.noSpin {
-				doneCh := make(chan *runStatus)
+			pipeReader, pipeWriter := io.Pipe()
+			golog.SetOutput(pipeWriter)
+			buf := make([]byte, 1<<15)
+			var bufStr string
 
-				// Redirect stderr while we're spinning and filter out "proto: X"
-				// log spam (restore stderr on exit).
-				oldErr := os.Stderr
-				r, w, err := os.Pipe()
-				if err != nil {
-					return fmt.Errorf("can't create pipe2 for stderr redirect: %v", err)
+			// Remove log spam from third-party libs.
+			appendFilterBufStr := func(n int) {
+				bufStr += string(buf[:n])
+				lines := strings.Split(bufStr, "\n")
+				if len(lines) == 1 {
+					return
 				}
-				os.Stderr = w
-
-				defer func() {
-					// Restor stderr and close pipe.
-					os.Stderr = oldErr
-					w.Close()
-
-					sc := bufio.NewScanner(r)
-					s := &runStatus{err: err, doneCh: make(chan struct{})}
-					for sc.Scan() {
-						if strings.Contains(sc.Text(), "proto: ") {
-							continue
-						}
-						s.msgs = append(s.msgs, sc.Text())
+				// Prints all lines but the last line.
+				for i := 0; i < len(lines)-1; i++ {
+					line := lines[i]
+					if strings.Contains(line, "proto: ") || line == "" {
+						continue
 					}
-
-					doneCh <- s
-					<-s.doneCh
-				}()
-
-				go spinMsg(a.Name, doneCh)
+					fmt.Println(line)
+				}
+				// Since the last line might be incomplete, keep it until
+				// we see a newline.
+				bufStr = lines[len(lines)-1]
 			}
-			return a.Install(ctx)
+			go func() {
+				for {
+					n, err := pipeReader.Read(buf)
+					if err != nil {
+						if err == io.EOF {
+							appendFilterBufStr(n)
+							break
+						}
+						log.Errorf("error while reading from filtering pipe: %v", err)
+						break
+					}
+					appendFilterBufStr(n)
+					time.Sleep(100 * time.Millisecond)
+				}
+			}()
+
+			defer func() {
+				// Restore go log output and close pipe.
+				golog.SetOutput(os.Stderr)
+				pipeWriter.Close()
+			}()
+
+			if r.noSpin {
+				return a.Install(ctx)
+			}
+
+			errCh := make(chan error)
+			go spinMsg(a.Name, errCh)
+			err = a.Install(ctx)
+			errCh <- err
+			return err
 		}
 
 		if r.dryrun {
@@ -277,6 +289,7 @@ func (r *runtime) runCommand(ctx context.Context, cmd Command, addons []*addon.A
 		}
 
 		fmt.Printf("Rollout [%v] is live!\n", rollout.ID)
+
 	case RemoveCommand:
 		return runUntilErr(addons, func(a *addon.Addon) error {
 			return a.Remove(ctx)
