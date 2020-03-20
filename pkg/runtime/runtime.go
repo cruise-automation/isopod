@@ -17,10 +17,7 @@ package runtime
 import (
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
-	golog "log"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -196,56 +193,9 @@ func (r *runtime) runCommand(ctx context.Context, cmd Command, addons []*addon.A
 
 	case InstallCommand:
 		installAddonFn := func(a *addon.Addon) (err error) {
-			pipeReader, pipeWriter := io.Pipe()
-			golog.SetOutput(pipeWriter)
-			buf := make([]byte, 1<<15)
-			var bufStr string
-
-			// Remove log spam from third-party libs.
-			appendFilterBufStr := func(n int) {
-				bufStr += string(buf[:n])
-				lines := strings.Split(bufStr, "\n")
-				if len(lines) == 1 {
-					return
-				}
-				// Prints all lines but the last line.
-				for i := 0; i < len(lines)-1; i++ {
-					line := lines[i]
-					if strings.Contains(line, "proto: ") || line == "" {
-						continue
-					}
-					fmt.Println(line)
-				}
-				// Since the last line might be incomplete, keep it until
-				// we see a newline.
-				bufStr = lines[len(lines)-1]
-			}
-			go func() {
-				for {
-					n, err := pipeReader.Read(buf)
-					if err != nil {
-						if err == io.EOF {
-							appendFilterBufStr(n)
-							break
-						}
-						log.Errorf("error while reading from filtering pipe: %v", err)
-						break
-					}
-					appendFilterBufStr(n)
-					time.Sleep(100 * time.Millisecond)
-				}
-			}()
-
-			defer func() {
-				// Restore go log output and close pipe.
-				golog.SetOutput(os.Stderr)
-				pipeWriter.Close()
-			}()
-
 			if r.noSpin {
 				return a.Install(ctx)
 			}
-
 			errCh := make(chan error)
 			go spinMsg(a.Name, errCh)
 			err = a.Install(ctx)

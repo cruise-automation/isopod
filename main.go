@@ -18,6 +18,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	stdlog "log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -163,11 +164,18 @@ func buildAddonsRuntime(kubeC *rest.Config, mainFile string) (runtime.Runtime, e
 	return addons, nil
 }
 
+type verboseGlogWriter struct{}
+
+func (w *verboseGlogWriter) Write(p []byte) (n int, err error) {
+	log.V(1).Info(string(p))
+	return len(p), nil
+}
+
 func main() {
 	ctx := context.Background()
 
-	// Redirects all output to standrad Go log to Google's log.
-	log.CopyStandardLogTo("INFO")
+	// Redirects all output to standrad Go log to Google's log at verbose level 1.
+	stdlog.SetOutput(&verboseGlogWriter{})
 	defer log.Flush()
 
 	if *showVersion {
