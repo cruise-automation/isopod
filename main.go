@@ -56,6 +56,7 @@ var (
 
 func init() {
 	flag.Parse()
+	stdlog.SetFlags(stdlog.Lshortfile)
 }
 
 func usageAndDie() {
