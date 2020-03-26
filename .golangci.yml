@@ -44,7 +44,7 @@ linters-settings:
   goimports:
     # put imports beginning with prefix after 3rd-party packages;
     # it's a comma-separated list of prefixes
-    local-prefixes: github.robot.car/cruise/isopod/
+    local-prefixes: github.com/cruise-automation/isopod/
 
   maligned:
     # print struct with more effective memory layout or not, false by default

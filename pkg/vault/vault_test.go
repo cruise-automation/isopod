@@ -17,10 +17,10 @@ package vault
 import (
 	"testing"
 
+	vaultapi "github.com/hashicorp/vault/api"
 	"go.starlark.net/starlark"
 
 	util "github.com/cruise-automation/isopod/pkg/testing"
-	vaultapi "github.com/hashicorp/vault/api"
 )
 
 func TestVault(t *testing.T) {
