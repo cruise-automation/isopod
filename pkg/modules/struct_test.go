@@ -15,7 +15,6 @@
 package modules
 
 import (
-	"fmt"
 	"testing"
 
 	"go.starlark.net/starlark"
@@ -30,12 +29,12 @@ func TestStruct(t *testing.T) {
 	}{
 		{
 			name:          "Simple struct",
-			expression:    fmt.Sprintf(`struct(foo="bar").to_json()`),
+			expression:    `struct(foo="bar").to_json()`,
 			expectedValue: `{"foo": "bar"}`,
 		},
 		{
 			name:          "Nested structs",
-			expression:    fmt.Sprintf(`struct(foo="bar", baz=struct(qux="bar")).to_json()`),
+			expression:    `struct(foo="bar", baz=struct(qux="bar")).to_json()`,
 			expectedValue: `{"baz": {"qux": "bar"}, "foo": "bar"}`,
 		},
 	} {

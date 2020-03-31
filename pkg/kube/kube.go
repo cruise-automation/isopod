@@ -591,15 +591,17 @@ func (m *kubePackage) kubePeek(ctx context.Context, url string) (obj runtime.Obj
 	return obj, true, nil
 }
 
-func errImmutableRessource(resource string) error {
-	return fmt.Errorf("cannot update %s. Use -force to delete and recreate", resource)
+var ErrUpdateImmutable = errors.New("cannot update immutable. Use -force to delete and recreate")
+
+func ErrImmutableRessource(attribute string, obj runtime.Object) error {
+	return fmt.Errorf("failed to update %s of resource %s: %w", attribute, obj.GetObjectKind().GroupVersionKind().String(), ErrUpdateImmutable)
 }
 
 // mergeObjects merges the fields from the live object to the new
 // object such as resource version and clusterIP.
 // TODO(jon.yucel): Instead of selectively picking fields, holisticly
 // solving this problem requires three-way merge implementation.
-func mergeObjects(live, obj runtime.Object) (recreate bool, err error) {
+func mergeObjects(live, obj runtime.Object) error {
 	// Service's clusterIP needs to be re-set to the value provided
 	// by controller or mutation will be denied.
 	if liveSvc, ok := live.(*corev1.Service); ok {
@@ -610,7 +612,7 @@ func mergeObjects(live, obj runtime.Object) (recreate bool, err error) {
 		wantPort := svc.Spec.HealthCheckNodePort
 		// If port is set (non-zero) and doesn't match the existing port (also non-zero), error out.
 		if wantPort != 0 && gotPort != 0 && wantPort != gotPort {
-			return true, errImmutableRessource(".spec.healthCheckNodePort")
+			return ErrImmutableRessource(".spec.healthCheckNodePort", obj)
 		}
 		svc.Spec.HealthCheckNodePort = gotPort
 	}
@@ -620,7 +622,7 @@ func mergeObjects(live, obj runtime.Object) (recreate bool, err error) {
 		if liveClusterRoleBinding.RoleRef.APIGroup != clusterRoleBinding.RoleRef.APIGroup ||
 			liveClusterRoleBinding.RoleRef.Kind != clusterRoleBinding.RoleRef.Kind ||
 			liveClusterRoleBinding.RoleRef.Name != clusterRoleBinding.RoleRef.Name {
-			return true, errImmutableRessource("roleRef")
+			return ErrImmutableRessource("roleRef", obj)
 		}
 	}
 
@@ -630,17 +632,22 @@ func mergeObjects(live, obj runtime.Object) (recreate bool, err error) {
 		obj.(metav1.Object).SetResourceVersion(gotRV)
 	}
 
-	return false, nil
+	return nil
 }
 
-// maybeRecreate can be called to check if a resource can be updated or is immutable and needs recreation.
-// It evaluates if resource should be forcefully recreated, or if not, an error is thrown.
+// maybeRecreate can be called to check if a resource can be updated or
+// is immutable and needs recreation.
+// It evaluates if resource should be forcefully recreated. In that case
+// the resource will be deleted and recreated. If the -force flag is not
+// enabled and an immutable resource should be updated, an error is thrown
+// and no resources will get deleted.
 func maybeRecreate(ctx context.Context, live, obj runtime.Object, m *kubePackage, r *apiResource) error {
-	recreate, err := mergeObjects(live, obj)
-	if recreate && m.force {
+	err := mergeObjects(live, obj)
+	if errors.Is(errors.Unwrap(err), ErrUpdateImmutable) && m.force {
 		if m.dryRun {
 			fmt.Fprintf(os.Stdout, "\n\n**WARNING** %s %s is immutable and will be deleted and recreated.\n", strings.ToLower(r.GVK.Kind), maybeNamespaced(r.Name, r.Namespace))
 		}
+		// kubeDelete() already properly handles a dry run, so the resource won't be deleted if -force is set, but in dry run mode
 		if err := m.kubeDelete(ctx, r, true); err != nil {
 			return err
 		}

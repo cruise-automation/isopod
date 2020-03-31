@@ -738,8 +738,16 @@ func TestKubeExists(t *testing.T) {
 }
 
 func TestErrImmutableRessource(t *testing.T) {
-	got := errImmutableRessource("testResource")
-	want := errors.New("cannot update testResource. Use -force to delete and recreate")
+	got := ErrImmutableRessource("roleRef", &corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRoleBinding",
+			APIVersion: "rbac.authorization.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+		},
+	})
+	want := errors.New("failed to update roleRef of resource rbac.authorization.k8s.io/v1, Kind=ClusterRoleBinding: cannot update immutable. Use -force to delete and recreate")
 	if want.Error() != got.Error() {
 		t.Errorf("Unexpected error.\nWant:\n\t%s\nGot:\n\t%s", want, got)
 	}
@@ -761,7 +769,7 @@ func TestUpdateImmutableResources(t *testing.T) {
 			name:       "Update ClusterRoleBinding",
 			exprCreate: `kube.put(name='foo', namespace='bar', api_group='rbac.authorization.k8s.io', data=[rbacv1.ClusterRoleBinding(roleRef=rbacv1.RoleRef(name="foo",kind="ClusterRole"))])`,
 			exprUpdate: `kube.put(name='foo', namespace='bar', api_group='rbac.authorization.k8s.io', data=[rbacv1.ClusterRoleBinding(roleRef=rbacv1.RoleRef(name="bar",kind="ClusterRole"))])`,
-			wantErr:    fmt.Sprintf("<kube.put>: %s", errImmutableRessource("roleRef").Error()),
+			wantErr:    fmt.Sprintf("<kube.put>: %s", ErrImmutableRessource("roleRef", &corev1.ObjectReference{})),
 		},
 		{
 			name:         "Update ClusterRoleBinding force",
@@ -773,7 +781,7 @@ func TestUpdateImmutableResources(t *testing.T) {
 			name:       "Update ClusterRoleBinding",
 			exprCreate: `kube.put(name='foo', namespace='bar', data=[corev1.Service(spec = corev1.ServiceSpec(healthCheckNodePort=41))])`,
 			exprUpdate: `kube.put(name='foo', namespace='bar', data=[corev1.Service(spec = corev1.ServiceSpec(healthCheckNodePort=42))])`,
-			wantErr:    fmt.Sprintf("<kube.put>: %s", errImmutableRessource(".spec.healthCheckNodePort").Error()),
+			wantErr:    fmt.Sprintf("<kube.put>: %s", ErrImmutableRessource(".spec.healthCheckNodePort", &corev1.ObjectReference{})),
 		},
 		{
 			name:         "Update ClusterRoleBinding force",
