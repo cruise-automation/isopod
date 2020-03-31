@@ -45,6 +45,7 @@ var (
 	addonRegex         = flag.String("match_addons", "", "Filters configured addons based on provided regex.")
 	isopodCtx          = flag.String("context", "", "Comma-separated list of `foo=bar' context parameters passed to the clusters Starlark function.")
 	dryRun             = flag.Bool("dry_run", false, "Print intended actions but don't mutate anything.")
+	force              = flag.Bool("force", false, "Delete and recreate immutable resources without confirmation.")
 	svcAcctKeyFile     = flag.String("sa_key", "", "Path to the service account json file.")
 	noSpin             = flag.Bool("nospin", false, "Disables command line status spinner.")
 	kubeDiff           = flag.Bool("kube_diff", false, "Print diff against live Kubernetes objects.")
@@ -103,6 +104,7 @@ func buildClustersRuntime(mainFile string) runtime.Runtime {
 		UserAgent:         "Isopod/" + version,
 		KubeConfigPath:    *kubeconfig,
 		DryRun:            *dryRun,
+		Force:             *force,
 	})
 	if err != nil {
 		log.Exitf("Failed to initialize clusters runtime: %v", err)
@@ -157,6 +159,7 @@ func buildAddonsRuntime(kubeC *rest.Config, mainFile string) (runtime.Runtime, e
 		KubeConfigPath:    *kubeconfig,
 		Store:             st,
 		DryRun:            *dryRun,
+		Force:             *force,
 	}, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize addons runtime: %v", err)

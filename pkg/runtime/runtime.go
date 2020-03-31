@@ -82,11 +82,11 @@ type Runtime interface {
 type runtime struct {
 	Config
 	// filename string
-	globals        starlark.StringDict
-	pkgs           starlark.StringDict // Predeclared packages.
-	addonRe        *regexp.Regexp
-	store          store.Store
-	noSpin, dryrun bool
+	globals               starlark.StringDict
+	pkgs                  starlark.StringDict // Predeclared packages.
+	addonRe               *regexp.Regexp
+	store                 store.Store
+	noSpin, dryrun, force bool
 }
 
 func init() {
@@ -106,6 +106,7 @@ func New(c *Config, opts ...Option) (Runtime, error) {
 	}
 	options := &options{
 		dryRun: c.DryRun,
+		force:  c.Force,
 		pkgs: starlark.StringDict{
 			"error":  starlark.NewBuiltin("error", addon.ErrorFn),
 			"sleep":  starlark.NewBuiltin("sleep", addon.SleepFn),
@@ -132,6 +133,7 @@ func New(c *Config, opts ...Option) (Runtime, error) {
 		store:   c.Store,
 		noSpin:  options.noSpin,
 		dryrun:  options.dryRun,
+		force:   options.force,
 	}, nil
 }
 

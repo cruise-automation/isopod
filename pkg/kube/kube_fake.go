@@ -389,7 +389,8 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 }
 
 // NewFake returns a new fake kube module for testing.
-func NewFake() (m starlark.HasAttrs, closeFn func(), err error) {
+// It takes a bool attribute to determine if the starkalrk.HasAttrs object should forcefully update resources
+func NewFake(force bool) (m starlark.HasAttrs, closeFn func(), err error) {
 	// Create a fake API store with some endpoints pre-populated
 	cm := core.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -432,6 +433,7 @@ func NewFake() (m starlark.HasAttrs, closeFn func(), err error) {
 		dynamic.NewForConfigOrDie(rConf),
 		&http.Client{Transport: t},
 		false, /* dryRun */
+		force,
 		false, /* diff */
 		nil,   /* diffFilters */
 	)

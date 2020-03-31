@@ -152,7 +152,7 @@ func exec(ctx context.Context, path string) (*result, error) {
 	}
 	defer vClose()
 
-	k, kClose, err := kube.NewFake()
+	k, kClose, err := kube.NewFake(false)
 	if err != nil {
 		return nil, err
 	}

@@ -44,6 +44,11 @@ type Config struct {
 	// live objects in cluster.
 	DryRun bool
 
+	// Force is true if the -force flag is set and will delete and recreate
+	// immutable resources without confirmation. By default Force is disabled
+	// and will error in case an immutable resource is being updated.
+	Force bool
+
 	// Store is the storage to keep all rollout status.
 	Store store.Store
 }

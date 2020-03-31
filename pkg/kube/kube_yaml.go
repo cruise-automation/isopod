@@ -148,7 +148,7 @@ func (m *kubePackage) kubeUpdateYaml(ctx context.Context, r *apiResource, obj ru
 		return err
 	}
 	if found {
-		if err := mergeObjects(live, obj); err != nil {
+		if err := maybeRecreate(ctx, live, obj, m, r); err != nil {
 			return err
 		}
 	}
