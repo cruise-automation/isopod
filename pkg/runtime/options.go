@@ -51,6 +51,7 @@ type Option interface {
 
 type options struct {
 	dryRun  bool
+	force   bool
 	noSpin  bool
 	pkgs    starlark.StringDict
 	addonRe *regexp.Regexp
@@ -122,7 +123,7 @@ func WithKube(c *rest.Config, diff bool, diffFilters []string) Option {
 			return err
 		}
 
-		opts.pkgs["kube"] = kube.New(c.Host, dC, dynC, &http.Client{Transport: t}, opts.dryRun, diff, diffFilters)
+		opts.pkgs["kube"] = kube.New(c.Host, dC, dynC, &http.Client{Transport: t}, opts.dryRun, opts.force, diff, diffFilters)
 		pkgs := skycfg.UnstablePredeclaredModules(&protoRegistry{})
 		for name, pkg := range pkgs {
 			opts.pkgs[name] = pkg

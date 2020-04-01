@@ -152,7 +152,7 @@ func exec(ctx context.Context, path string) (*result, error) {
 	}
 	defer vClose()
 
-	k, kClose, err := kube.NewFake()
+	k, kClose, err := kube.NewFake(false)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func exec(ctx context.Context, path string) (*result, error) {
 	startT := time.Now()
 
 	out := new(bytes.Buffer)
-	outFn := func(_ *starlark.Thread, msg string) { fmt.Fprintf(out, msg) }
+	outFn := func(_ *starlark.Thread, msg string) { fmt.Fprint(out, msg) }
 	thread := &starlark.Thread{
 		Print: outFn,
 		Load:  loader.NewModulesLoaderWithPredeclaredPkgs(filepath.Dir(path), pkgs).Load,

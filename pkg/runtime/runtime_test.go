@@ -54,6 +54,7 @@ func TestForEachCluster(t *testing.T) {
 		KubeConfigPath:    "kubeconfig",
 		Store:             storeStub{},
 		DryRun:            false,
+		Force:             false,
 	})
 	if err != nil {
 		t.Fatal(err)

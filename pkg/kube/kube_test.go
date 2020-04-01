@@ -46,6 +46,8 @@ import (
 	util "github.com/cruise-automation/isopod/pkg/testing"
 )
 
+const noneValue = "None"
+
 func statusWithDetails(group, kind, name, msg string) *metav1.Status {
 	return &metav1.Status{
 		TypeMeta: metav1.TypeMeta{
@@ -267,6 +269,7 @@ func addImports(t *testing.T, pkgs starlark.StringDict) {
 		"corev1":       "k8s.io.api.core.v1",
 		"ext":          "k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1beta1",
 		"metav1":       "k8s.io.apimachinery.pkg.apis.meta.v1",
+		"rbacv1":       "k8s.io.api.rbac.v1",
 	} {
 		v, _, err := util.Eval(t.Name(), fmt.Sprintf("proto.package(%q)", group), nil, pkgs)
 		if err != nil {
@@ -446,32 +449,6 @@ func TestKubePackage(t *testing.T) {
 				Labels:      isopodLabels,
 				Annotations: map[string]string{ctxAnnotationKey: `{"env":"test"}`},
 			},
-		},
-		{
-			name: "Update Service (attempt to reset healthcheck port)",
-			expr: `kube.put(name='foo', namespace='bar', data=[corev1.Service(spec = corev1.ServiceSpec(healthCheckNodePort=41))])`,
-			gotObj: &corev1.Service{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Service",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "foo",
-					ResourceVersion: "42",
-				},
-				Spec: corev1.ServiceSpec{
-					HealthCheckNodePort: 42,
-				},
-			},
-			wantURLs: urls("/api/v1/namespaces/bar/services/foo"),
-			wantPodMeta: &metav1.ObjectMeta{
-				Name:            "foo",
-				Namespace:       "bar",
-				Labels:          isopodLabels,
-				Annotations:     map[string]string{ctxAnnotationKey: `{"env":"test"}`},
-				ResourceVersion: "42",
-			},
-			wantErr: "<kube.put>: cannot update .spec.healthCheckNodePort to new value (want: 41, got: 42). requires resource recreation",
 		},
 		{
 			name: "Create Namespace",
@@ -704,7 +681,7 @@ func TestKubePackage(t *testing.T) {
 				t.Errorf("Unexpected error.\nWant:\n\t%s\nGot:\n\t%s", tc.wantErr, gotErr)
 			}
 			gotV := ""
-			if v != nil && v.String() != "None" {
+			if v != nil && v.String() != noneValue {
 				gotV = v.String()
 			}
 			if tc.wantResult != gotV {
@@ -718,7 +695,7 @@ func TestKubeExists(t *testing.T) {
 	pkgs := skycfg.UnstablePredeclaredModules(&protoRegistry{})
 	addImports(t, pkgs)
 
-	k, kClose, err := NewFake()
+	k, kClose, err := NewFake(false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -726,30 +703,15 @@ func TestKubeExists(t *testing.T) {
 
 	pkgs["kube"] = k
 
-	urls := func(url ...string) []string {
-		return url
-	}
 	for _, tc := range []struct {
 		name       string
 		expr       string
-		gotObj     apiruntime.Object
-		wantURLs   []string
 		wantErr    string
 		wantResult string
 	}{
 		{
-			name: "Pod doesn't exist",
-			expr: `kube.exists(pod='bar/foo')`,
-			gotObj: &corev1.Pod{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Pod",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "foo",
-				},
-			},
-			wantURLs:   urls("/api/v1/namespaces/bar/pods/foo"),
+			name:       "Pod doesn't exist",
+			expr:       `kube.exists(pod='bar/foo')`,
 			wantResult: `False`,
 		},
 	} {
@@ -765,7 +727,95 @@ func TestKubeExists(t *testing.T) {
 				t.Errorf("Unexpected error.\nWant:\n\t%s\nGot:\n\t%s", tc.wantErr, gotErr)
 			}
 			gotV := ""
-			if v != nil && v.String() != "None" {
+			if v != nil && v.String() != noneValue {
+				gotV = v.String()
+			}
+			if tc.wantResult != gotV {
+				t.Fatalf("Unexpected expression result.\nWant: %s\nGot: %s", tc.wantResult, gotV)
+			}
+		})
+	}
+}
+
+func TestErrImmutableRessource(t *testing.T) {
+	got := ErrImmutableRessource("roleRef", &corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRoleBinding",
+			APIVersion: "rbac.authorization.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+		},
+	})
+	want := errors.New("failed to update roleRef of resource rbac.authorization.k8s.io/v1, Kind=ClusterRoleBinding: cannot update immutable. Use -force to delete and recreate")
+	if want.Error() != got.Error() {
+		t.Errorf("Unexpected error.\nWant:\n\t%s\nGot:\n\t%s", want, got)
+	}
+}
+
+func TestUpdateImmutableResources(t *testing.T) {
+	pkgs := skycfg.UnstablePredeclaredModules(&protoRegistry{})
+	addImports(t, pkgs)
+
+	for _, tc := range []struct {
+		name         string
+		exprCreate   string
+		exprUpdate   string
+		forceEnabled bool
+		wantErr      string
+		wantResult   string
+	}{
+		{
+			name:       "Update ClusterRoleBinding",
+			exprCreate: `kube.put(name='foo', namespace='bar', api_group='rbac.authorization.k8s.io', data=[rbacv1.ClusterRoleBinding(roleRef=rbacv1.RoleRef(name="foo",kind="ClusterRole"))])`,
+			exprUpdate: `kube.put(name='foo', namespace='bar', api_group='rbac.authorization.k8s.io', data=[rbacv1.ClusterRoleBinding(roleRef=rbacv1.RoleRef(name="bar",kind="ClusterRole"))])`,
+			wantErr:    fmt.Sprintf("<kube.put>: %s", ErrImmutableRessource("roleRef", &corev1.ObjectReference{})),
+		},
+		{
+			name:         "Update ClusterRoleBinding force",
+			exprCreate:   `kube.put(name='foo', namespace='bar', api_group='rbac.authorization.k8s.io', data=[rbacv1.ClusterRoleBinding(roleRef=rbacv1.RoleRef(name="foo",kind="ClusterRole"))])`,
+			exprUpdate:   `kube.put(name='foo', namespace='bar', api_group='rbac.authorization.k8s.io', data=[rbacv1.ClusterRoleBinding(roleRef=rbacv1.RoleRef(name="bar",kind="ClusterRole"))])`,
+			forceEnabled: true,
+		},
+		{
+			name:       "Update ClusterRoleBinding",
+			exprCreate: `kube.put(name='foo', namespace='bar', data=[corev1.Service(spec = corev1.ServiceSpec(healthCheckNodePort=41))])`,
+			exprUpdate: `kube.put(name='foo', namespace='bar', data=[corev1.Service(spec = corev1.ServiceSpec(healthCheckNodePort=42))])`,
+			wantErr:    fmt.Sprintf("<kube.put>: %s", ErrImmutableRessource(".spec.healthCheckNodePort", &corev1.ObjectReference{})),
+		},
+		{
+			name:         "Update ClusterRoleBinding force",
+			exprCreate:   `kube.put(name='foo', namespace='bar', data=[corev1.Service(spec = corev1.ServiceSpec(healthCheckNodePort=41))])`,
+			exprUpdate:   `kube.put(name='foo', namespace='bar', data=[corev1.Service(spec = corev1.ServiceSpec(healthCheckNodePort=42))])`,
+			forceEnabled: true,
+		},
+	} {
+		sCtx := &addon.SkyCtx{Attrs: starlark.StringDict{"env": starlark.String("test")}}
+		t.Run(tc.name, func(t *testing.T) {
+
+			k, kClose, err := NewFake(tc.forceEnabled)
+			if err != nil {
+				t.Error(err)
+			}
+			defer kClose()
+
+			pkgs["kube"] = k
+
+			_, _, err = util.Eval("kube", tc.exprCreate, sCtx, pkgs)
+			if err != nil {
+				t.Error(err)
+			}
+			v, _, err := util.Eval("kube", tc.exprUpdate, sCtx, pkgs)
+
+			gotErr := ""
+			if err != nil {
+				gotErr = err.Error()
+			}
+			if tc.wantErr != gotErr {
+				t.Errorf("Unexpected error.\nWant:\n\t%s\nGot:\n\t%s", tc.wantErr, gotErr)
+			}
+			gotV := ""
+			if v != nil && v.String() != noneValue {
 				gotV = v.String()
 			}
 			if tc.wantResult != gotV {

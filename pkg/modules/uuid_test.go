@@ -87,12 +87,12 @@ func TestUUIDErrorCase(t *testing.T) {
 	}{
 		{
 			name:        "v3 needs exactly one argument",
-			expression:  fmt.Sprintf(`uuid.v3()`),
+			expression:  `uuid.v3()`,
 			expectedErr: errors.New("uuid.v3: got 0 arguments, want 1"),
 		},
 		{
 			name:        "v5 needs exactly one argument",
-			expression:  fmt.Sprintf(`uuid.v5()`),
+			expression:  `uuid.v5()`,
 			expectedErr: errors.New("uuid.v5: got 0 arguments, want 1"),
 		},
 	} {

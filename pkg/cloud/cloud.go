@@ -60,9 +60,7 @@ func NewAbstractKubeVendor(typeStr string, requiredFields []string, kwargs []sta
 	for _, kwarg := range kwargs {
 		k := string(kwarg[0].(starlark.String))
 		v := kwarg[1]
-		if _, ok := required[k]; ok {
-			delete(required, k)
-		}
+		delete(required, k)
 		if err := kubeVendor.SetField(k, v); err != nil {
 			return nil, fmt.Errorf("<%s> cannot process field `%v=%v`", typeStr, k, v)
 		}
