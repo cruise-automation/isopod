@@ -298,6 +298,7 @@ github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stripe/skycfg v0.0.0-20190805025019-bafbc3998017 h1:QF2hQ30rLdDMk6oB4ezDZ7GKiu7iL7ulyg7BT0VvjL8=
 github.com/stripe/skycfg v0.0.0-20190805025019-bafbc3998017/go.mod h1:nc0qou0URq+8vaEcIz0O6ZD9DgYdLiwYRWWyB2LwSAU=
+github.com/stripe/skycfg v0.0.0-20200303020846-4f599970a3e6 h1:Nr78kwzRyXZaimz7tFFlJcc5mO2rMecmP/eiCPHDeqE=
 github.com/tj/go-spin v1.1.0 h1:lhdWZsvImxvZ3q1C5OIB7d72DuOwP4O2NdBg9PyzNds=
 github.com/tj/go-spin v1.1.0/go.mod h1:Mg1mzmePZm4dva8Qz60H2lHwmJ2loum4VIrLgVnKwh4=
 github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926 h1:G3dpKMzFDjgEh2q1Z7zUUtKa8ViPtH+ocF0bE0g00O8=
