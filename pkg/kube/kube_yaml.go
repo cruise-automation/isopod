@@ -178,9 +178,9 @@ func (m *kubePackage) kubeUpdateYaml(ctx context.Context, r *apiResource, obj ru
 
 	var resp *unstructured.Unstructured
 	if found {
-		resp, err = c.Update(&unstructured.Unstructured{Object: un}, metav1.UpdateOptions{})
+		resp, err = c.Update(context.TODO(), &unstructured.Unstructured{Object: un}, metav1.UpdateOptions{})
 	} else {
-		resp, err = c.Create(&unstructured.Unstructured{Object: un}, metav1.CreateOptions{})
+		resp, err = c.Create(context.TODO(), &unstructured.Unstructured{Object: un}, metav1.CreateOptions{})
 	}
 	if err != nil {
 		return err
