@@ -32,7 +32,7 @@ jobs:
     <<: *linter-image
     steps:
       - checkout
-      - run: golangci-lint run
+      - run: golangci-lint --verbose --concurrency 4 run
 
   unittest:
     <<: *golang-docker-base-image
