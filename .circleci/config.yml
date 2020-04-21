@@ -10,6 +10,7 @@ golang-docker-base-image: &golang-docker-base-image
 linter-image: &linter-image
   docker:
     - image: golangci/golangci-lint:v1.24.0
+  resource_class: medium
 
 jobs:
   build:

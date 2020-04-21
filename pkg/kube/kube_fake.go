@@ -38,25 +38,23 @@ import (
 
 	rbacsyncv1alpha "github.com/cruise-automation/rbacsync/pkg/apis/rbacsync/v1alpha"
 	arkv1 "github.com/heptio/ark/pkg/apis/ark/v1"
+	admissionregistrationv1b1 "k8s.io/api/admissionregistration/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
+	appsv1beta1 "k8s.io/api/apps/v1beta1"
+	appsv1beta2 "k8s.io/api/apps/v1beta2"
+	authenticationv1 "k8s.io/api/authentication/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	csr "k8s.io/api/certificates/v1beta1"
-	core "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	storagev1 "k8s.io/api/storage/v1"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	admissionregistrationv1b1 "k8s.io/kubernetes/pkg/apis/admissionregistration/v1beta1"
-	appsv1 "k8s.io/kubernetes/pkg/apis/apps/v1"
-	appsv1beta1 "k8s.io/kubernetes/pkg/apis/apps/v1beta1"
-	appsv1beta2 "k8s.io/kubernetes/pkg/apis/apps/v1beta2"
-	authenticationv1 "k8s.io/kubernetes/pkg/apis/authentication/v1"
-	autoscalingv1 "k8s.io/kubernetes/pkg/apis/autoscaling/v1"
-	batchv1 "k8s.io/kubernetes/pkg/apis/batch/v1"
-	certificatesv1beta1 "k8s.io/kubernetes/pkg/apis/certificates/v1beta1"
-	corev1 "k8s.io/kubernetes/pkg/apis/core/v1"
-	extensionsv1beta1 "k8s.io/kubernetes/pkg/apis/extensions/v1beta1"
-	networkingv1 "k8s.io/kubernetes/pkg/apis/networking/v1"
-	policyv1beta1 "k8s.io/kubernetes/pkg/apis/policy/v1beta1"
-	rbacv1 "k8s.io/kubernetes/pkg/apis/rbac/v1"
-	storagev1 "k8s.io/kubernetes/pkg/apis/storage/v1"
-	storagev1beta1 "k8s.io/kubernetes/pkg/apis/storage/v1beta1"
 
 	isopod "github.com/cruise-automation/isopod/pkg"
 )
@@ -372,7 +370,7 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 			},
 		},
 		{
-			GroupVersion: certificatesv1beta1.SchemeGroupVersion.String(),
+			GroupVersion: csr.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "certificatesigningrequests", Kind: "CertificateSigningRequest"},
 			},
@@ -392,7 +390,7 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 // It takes a bool attribute to determine if the starkalrk.HasAttrs object should forcefully update resources
 func NewFake(force bool) (m starlark.HasAttrs, closeFn func(), err error) {
 	// Create a fake API store with some endpoints pre-populated
-	cm := core.ConfigMap{
+	cm := corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ConfigMap",

@@ -16,6 +16,7 @@
 package kube
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -46,11 +47,13 @@ func New(c kubernetes.Interface, namespace string) *Store {
 // CreateRollout implements store.Store.CreateRollout.
 func (s *Store) CreateRollout() (*store.Rollout, error) {
 	cm, err := s.clientset.CoreV1().ConfigMaps(s.namespace).Create(
+		context.TODO(),
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "rollout-" + xid.New().String(),
 			},
 		},
+		metav1.CreateOptions{},
 	)
 	if err != nil {
 		return nil, err
@@ -63,6 +66,7 @@ func (s *Store) CreateRollout() (*store.Rollout, error) {
 // PutAddonRun implements store.Store.PutAddonRun.
 func (s *Store) PutAddonRun(id store.RolloutID, addon *store.AddonRun) (store.RunID, error) {
 	rollout, err := s.clientset.CoreV1().ConfigMaps(s.namespace).Get(
+		context.TODO(),
 		string(id),
 		metav1.GetOptions{},
 	)
@@ -84,6 +88,7 @@ func (s *Store) PutAddonRun(id store.RolloutID, addon *store.AddonRun) (store.Ru
 		"owner": string(id),
 	}
 	run, err := s.clientset.CoreV1().ConfigMaps(s.namespace).Create(
+		context.TODO(),
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            fmt.Sprintf("%s-run-%v", addon.Name, xid.New()),
@@ -96,6 +101,7 @@ func (s *Store) PutAddonRun(id store.RolloutID, addon *store.AddonRun) (store.Ru
 			},
 			BinaryData: addon.Data,
 		},
+		metav1.CreateOptions{},
 	)
 	if err != nil {
 		return "", err
@@ -111,7 +117,11 @@ func (s *Store) PutAddonRun(id store.RolloutID, addon *store.AddonRun) (store.Ru
 	// Assume we are the only Isopod in the cluster and just error-out if
 	// something funky is going on (like update race condition) to let operator
 	// deal with it.
-	_, err = s.clientset.CoreV1().ConfigMaps(s.namespace).Update(rollout)
+	_, err = s.clientset.CoreV1().ConfigMaps(s.namespace).Update(
+		context.TODO(),
+		rollout,
+		metav1.UpdateOptions{},
+	)
 	if err != nil {
 		return "", err
 	}
@@ -121,6 +131,7 @@ func (s *Store) PutAddonRun(id store.RolloutID, addon *store.AddonRun) (store.Ru
 // CompleteRollout implements store.Store.CompleteRollout.
 func (s *Store) CompleteRollout(id store.RolloutID) error {
 	lst, err := s.clientset.CoreV1().ConfigMaps(s.namespace).List(
+		context.TODO(),
 		metav1.ListOptions{
 			FieldSelector: "metadata.name=rollout-live",
 			LabelSelector: "rollout=live", // fakeclient is kind of trash and doesn't support field selectors.
@@ -134,18 +145,22 @@ func (s *Store) CompleteRollout(id store.RolloutID) error {
 	var live *corev1.ConfigMap
 	if len(lst.Items) == 0 {
 		log.Infof("Creating new live rollout config for `%v'", id)
-		_, err = s.clientset.CoreV1().ConfigMaps(s.namespace).Create(&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   "rollout-live",
-				Labels: map[string]string{"rollout": "live"},
+		_, err = s.clientset.CoreV1().ConfigMaps(s.namespace).Create(
+			context.TODO(),
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "rollout-live",
+					Labels: map[string]string{"rollout": "live"},
+				},
+				Data: map[string]string{"rollout": string(id)},
 			},
-			Data: map[string]string{"rollout": string(id)},
-		})
+			metav1.CreateOptions{},
+		)
 	} else {
 		live = &lst.Items[0]
 		log.Infof("Replacing live rollout config `%s' with: %v", live.Data["rollout"], id)
 		live.Data["rollout"] = string(id)
-		_, err = s.clientset.CoreV1().ConfigMaps(s.namespace).Update(live)
+		_, err = s.clientset.CoreV1().ConfigMaps(s.namespace).Update(context.TODO(), live, metav1.UpdateOptions{})
 	}
 
 	return err

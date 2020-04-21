@@ -760,7 +760,7 @@ func (m *kubePackage) kubeDelete(_ context.Context, r *apiResource, foreground b
 		return nil
 	}
 
-	if err := c.Delete(r.Name, &metav1.DeleteOptions{
+	if err := c.Delete(context.TODO(), r.Name, metav1.DeleteOptions{
 		PropagationPolicy: &delPolicy,
 	}); err != nil {
 		return err
