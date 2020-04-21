@@ -319,6 +319,17 @@ cadmin = kube.get(clusterrbacsyncconfig="cluster-admin",
                   json=True)
 ```
 
+It is also possible to receive a list of kubernetes objects. They can be filtered
+as defined in the [API documentation](https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/swagger.json).
+
+```python
+# Get all pods in namespace kube-system.
+pods = kube.get(pod="kube-system/")
+
+# Get all pods with label component=kube-apiserver
+pods = kube.get(pod="kube-system/?labelSelector=component=kube-apiserver")
+```
+
 #### `kube.exists`
 
 Checks whether a resource exists. If `wait` argument is set to duration (e.g
