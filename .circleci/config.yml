@@ -9,8 +9,7 @@ golang-docker-base-image: &golang-docker-base-image
 
 linter-image: &linter-image
   docker:
-    - image: golangci/golangci-lint:v1.24.0
-  resource_class: medium
+    - image: golangci/golangci-lint:v1.23.8
 
 jobs:
   build:
@@ -32,7 +31,9 @@ jobs:
     <<: *linter-image
     steps:
       - checkout
-      - run: golangci-lint --verbose --concurrency 4 run
+      # Smaller $GOGC allows more frequent garbbage collection to address OOMkill in CI.
+      # https://github.com/golangci/golangci-lint#memory-usage-of-golangci-lint
+      - run: GOGC=50 golangci-lint --verbose run
 
   unittest:
     <<: *golang-docker-base-image
