@@ -45,9 +45,7 @@ import (
 	authenticationv1 "k8s.io/api/authentication/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	csr "k8s.io/api/certificates/v1beta1"
-	core "k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -372,7 +370,7 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 			},
 		},
 		{
-			GroupVersion: certificatesv1beta1.SchemeGroupVersion.String(),
+			GroupVersion: csr.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "certificatesigningrequests", Kind: "CertificateSigningRequest"},
 			},
@@ -392,7 +390,7 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 // It takes a bool attribute to determine if the starkalrk.HasAttrs object should forcefully update resources
 func NewFake(force bool) (m starlark.HasAttrs, closeFn func(), err error) {
 	// Create a fake API store with some endpoints pre-populated
-	cm := core.ConfigMap{
+	cm := corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ConfigMap",
