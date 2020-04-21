@@ -559,11 +559,12 @@ func parseHTTPResponse(r *http.Response) (obj runtime.Object, details string, er
 	}
 
 	in, ok := obj.(metav1.Object)
-	if !ok {
-		return nil, "", fmt.Errorf("returned object does not implement `metav1.Object': %v", obj)
+	if ok {
+		return obj, fmt.Sprintf("%s%s `%s'", strings.ToLower(gvk.Kind), maybeCore(gvk.Group), maybeNamespaced(in.GetName(), in.GetNamespace())), nil
+	} else if _, ok := obj.(metav1.ListInterface); ok {
+		return obj, fmt.Sprintf("%s%s'", strings.ToLower(gvk.Kind), maybeCore(gvk.Group)), nil
 	}
-
-	return obj, fmt.Sprintf("%s%s `%s'", strings.ToLower(gvk.Kind), maybeCore(gvk.Group), maybeNamespaced(in.GetName(), in.GetNamespace())), nil
+	return nil, "", fmt.Errorf("returned object does not implement `metav1.Object` or `metav1.ListInterface`: %v", obj)
 }
 
 // kubePeek checks if object by url exists in Kubernetes.

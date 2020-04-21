@@ -408,6 +408,61 @@ func TestKubePackage(t *testing.T) {
 			wantResult: `map["apiVersion":"v1" "kind":"Pod" "metadata":map["creationTimestamp":None "name":"foo"] "spec":map["containers":None] "status":map[]]`,
 		},
 		{
+			name: "Get Pods as list",
+			expr: `kube.get(pod="bar/", json=True)`,
+			gotObj: &corev1.PodList{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "PodList",
+					APIVersion: "v1",
+				},
+				Items: []corev1.Pod{{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Pod",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "foo",
+					},
+				}},
+			},
+			wantURLs:   urls("/api/v1/namespaces/bar/pods"),
+			wantResult: `map["apiVersion":"v1" "items":[map["apiVersion":"v1" "kind":"Pod" "metadata":map["creationTimestamp":None "name":"foo"] "spec":map["containers":None] "status":map[]]] "kind":"PodList" "metadata":map[]]`,
+		},
+		{
+			name: "Get Pods as list with field selector: hit",
+			expr: `kube.get(pod="bar/?fieldSelector=metadata.name=foo", json=True)`,
+			gotObj: &corev1.PodList{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "PodList",
+					APIVersion: "v1",
+				},
+				Items: []corev1.Pod{{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Pod",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "foo",
+					},
+				}},
+			},
+			wantURLs:   urls("/api/v1/namespaces/bar/pods/"),
+			wantResult: `map["apiVersion":"v1" "items":[map["apiVersion":"v1" "kind":"Pod" "metadata":map["creationTimestamp":None "name":"foo"] "spec":map["containers":None] "status":map[]]] "kind":"PodList" "metadata":map[]]`,
+		},
+		{
+			name: "Get Pods as list with field selector: miss",
+			expr: `kube.get(pod="bar/?fieldSelector=metadata.name=bar", json=True)`,
+			gotObj: &corev1.PodList{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "PodList",
+					APIVersion: "v1",
+				},
+				Items: []corev1.Pod{},
+			},
+			wantURLs:   urls("/api/v1/namespaces/bar/pods/"),
+			wantResult: `map["apiVersion":"v1" "items":[] "kind":"PodList" "metadata":map[]]`,
+		},
+		{
 			name: "Update Service",
 			expr: `kube.put(name='foo', namespace='bar', data=[corev1.Service()])`,
 			gotObj: &corev1.Service{
