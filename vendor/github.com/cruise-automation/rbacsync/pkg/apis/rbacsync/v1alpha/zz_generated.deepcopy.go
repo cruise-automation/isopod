@@ -74,7 +74,7 @@ func (in *ClusterRBACSyncConfig) DeepCopyObject() runtime.Object {
 func (in *ClusterRBACSyncConfigList) DeepCopyInto(out *ClusterRBACSyncConfigList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]ClusterRBACSyncConfig, len(*in))
@@ -156,7 +156,7 @@ func (in *RBACSyncConfig) DeepCopyObject() runtime.Object {
 func (in *RBACSyncConfigList) DeepCopyInto(out *RBACSyncConfigList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]RBACSyncConfig, len(*in))
