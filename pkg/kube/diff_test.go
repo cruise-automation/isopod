@@ -149,6 +149,7 @@ func TestDiff(t *testing.T) {
 				"+    - name: https",
 				"+      containerPort: 443",
 				"     resources: {}",
+				" ",
 				""),
 		},
 	} {
@@ -178,7 +179,7 @@ func TestDiff(t *testing.T) {
 			}
 
 			if tc.wantDiff != gotDiff {
-				t.Errorf("Unexpected diff.\nWant:\n%s\nGot:\n%s", tc.wantDiff, gotDiff)
+				t.Errorf("Unexpected diff.\nWant:\n%s\nGot:\n%s\nDiff:%s", tc.wantDiff, gotDiff, cmp.Diff(tc.wantDiff, gotDiff))
 			}
 		})
 	}
