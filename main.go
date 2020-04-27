@@ -121,6 +121,10 @@ func buildAddonsRuntime(kubeC *rest.Config, mainFile string) (runtime.Runtime, e
 		vaultC.SetToken(*vaultToken)
 	}
 
+	// configure rate limiter
+	kubeC.QPS = float32(100)
+	kubeC.Burst = 100
+
 	cs, err := kubernetes.NewForConfig(kubeC)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Kubernetes clientset: %v", err)
