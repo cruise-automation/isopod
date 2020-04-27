@@ -42,6 +42,8 @@ var (
 	vaultToken         = flag.String("vault_token", os.Getenv("VAULT_TOKEN"), "Vault token obtained during authentication.")
 	namespace          = flag.String("namespace", "default", "Kubernetes namespace to store metadata in.")
 	kubeconfig         = flag.String("kubeconfig", "", "Kubernetes client config path.")
+	qps                = flag.Int("qps", 100, "qps to configure the kubernetes RESTClient")
+	burst              = flag.Int("burst", 100, "the burst to configure the kubernetes RESTClient")
 	addonRegex         = flag.String("match_addons", "", "Filters configured addons based on provided regex.")
 	isopodCtx          = flag.String("context", "", "Comma-separated list of `foo=bar' context parameters passed to the clusters Starlark function.")
 	dryRun             = flag.Bool("dry_run", false, "Print intended actions but don't mutate anything.")
@@ -120,6 +122,10 @@ func buildAddonsRuntime(kubeC *rest.Config, mainFile string) (runtime.Runtime, e
 	if *vaultToken != "" {
 		vaultC.SetToken(*vaultToken)
 	}
+
+	// configure rate limiter
+	kubeC.QPS = float32(*qps)
+	kubeC.Burst = *burst
 
 	cs, err := kubernetes.NewForConfig(kubeC)
 	if err != nil {
