@@ -235,7 +235,6 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 		{Name: "deployments", Namespaced: true, Kind: "Deployment"},
 		{Name: "controllerrevisions", Namespaced: true, Kind: "ControllerRevision"},
 		{Name: "daemonsets", Namespaced: true, Kind: "DaemonSet"},
-		{Name: "deployments", Namespaced: true, Kind: "Deployment"},
 		{Name: "replicasets", Namespaced: true, Kind: "ReplicaSet"},
 		{Name: "statefulsets", Namespaced: true, Kind: "StatefulSet"},
 	}
@@ -307,12 +306,9 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 		{
 			GroupVersion: extensionsv1beta1.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
-				{Name: "daemonsets", Namespaced: true, Kind: "DaemonSet"},
-				{Name: "deployments", Namespaced: true, Kind: "Deployment"},
 				{Name: "ingresses", Namespaced: true, Kind: "Ingress"},
 				{Name: "networkpolicies", Namespaced: true, Kind: "NetworkPolicy"},
 				{Name: "podsecuritypolicies", Kind: "PodSecurityPolicy"},
-				{Name: "replicasets", Namespaced: true, Kind: "ReplicaSet"},
 			},
 		},
 		{
