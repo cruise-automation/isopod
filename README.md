@@ -192,6 +192,15 @@ def install(ctx):
     )
 ```
 
+## Generate Addons
+
+You might come from a place where you have a yaml file, but you want to derive an isopod addon from it. It can be
+cumbersome to re-write huge yaml files in Starlark. So isopod offers a convenience command to generate the Starlark code
+based on a yaml or json input file containing any [kubernetes API object](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/):
+
+```bash
+isopod generate testdata/clusterrolebinding.yaml > addon.ipd
+```
 
 # Built-ins
 

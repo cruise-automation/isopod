@@ -57,6 +57,8 @@ const (
 	// AddonsStarFunc is the name of the function in Starlark that returns
 	// a list of addon() built-ins.
 	AddonsStarFunc = "addons"
+	// GenerateCommand is used to generate Starlark code from yaml input
+	GenerateCommand = "generate"
 )
 
 // Command is the type of the supported Isopod runtime command.
