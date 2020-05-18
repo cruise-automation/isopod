@@ -788,20 +788,12 @@ func (m *kubePackage) kubeGet(ctx context.Context, r *apiResource, wait time.Dur
 		waitDone = time.After(wait)
 	}
 
-	obj, ok, err := m.kubePeek(ctx, url)
-	if err != nil {
-		return nil, err
-	}
-	if ok {
-		return obj, nil
-	}
-	if waitDone == nil {
-		return nil, ErrNotFound
-	}
-
+	// retryInterval is zero so no delay before the first poll.
+	var retryInterval time.Duration
 	for {
 		select {
-		case <-time.After(waitRetryInterval):
+		case <-time.After(retryInterval):
+			retryInterval = waitRetryInterval
 			obj, ok, err := m.kubePeek(ctx, url)
 			if err != nil {
 				return nil, err
