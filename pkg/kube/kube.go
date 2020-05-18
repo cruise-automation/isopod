@@ -362,7 +362,7 @@ func (m *kubePackage) kubeGetFn(t *starlark.Thread, b *starlark.Builtin, args st
 
 	// Optional api_group argument.
 	var apiGroup starlark.String
-	var wait time.Duration
+	var wait time.Duration = 30 * time.Second
 	var wantJSON bool
 	for _, kv := range kwargs[1:] {
 		switch string(kv[0].(starlark.String)) {
@@ -773,7 +773,7 @@ func (m *kubePackage) kubeDelete(_ context.Context, r *apiResource, foreground b
 }
 
 // waitRetryInterval is a duration between consecutive get retries.
-const waitRetryInterval = 1 * time.Second
+const waitRetryInterval = 500 * time.Millisecond
 
 var ErrNotFound = errors.New("not found")
 
@@ -783,32 +783,31 @@ var ErrNotFound = errors.New("not found")
 // tries once if wait is zero).
 func (m *kubePackage) kubeGet(ctx context.Context, r *apiResource, wait time.Duration) (runtime.Object, error) {
 	url := m.Master + r.PathWithName()
-	retryCh := make(chan interface{}, 1)
-	retryCh <- struct{}{} // Seed the channel so that we don't wait initially.
 	var waitDone <-chan time.Time
 	if wait != 0 {
 		waitDone = time.After(wait)
 	}
 
+	// retryInterval is zero so no delay before the first poll.
+	var retryInterval time.Duration
 	for {
 		select {
-		case retryCh <- time.After(waitRetryInterval):
-		case <-retryCh:
+		case <-time.After(retryInterval):
+			retryInterval = waitRetryInterval
 			obj, ok, err := m.kubePeek(ctx, url)
 			if err != nil {
 				return nil, err
 			}
-
 			if ok {
 				return obj, nil
 			}
-
 			if waitDone == nil {
 				return nil, ErrNotFound
 			}
 
 		case <-waitDone:
 			return nil, ErrNotFound
+
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
