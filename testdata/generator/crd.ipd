@@ -22,8 +22,8 @@ def install(ctx):
                 scope="Namespaced",
                 versions=[apiextensionsv1beta1.CustomResourceDefinitionVersion(
                     name="v1",
-                    served=true,
-                    storage=true,
+                    served=True,
+                    storage=True,
                     schema=apiextensionsv1beta1.CustomResourceValidation(
                         openAPIV3Schema=apiextensionsv1beta1.JSONSchemaProps(
                             type="object",

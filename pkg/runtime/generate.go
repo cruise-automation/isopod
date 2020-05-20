@@ -218,6 +218,10 @@ func (a *addonFile) getData(v reflect.Value, indent int) []byte {
 	}
 	if v.Kind() != reflect.Struct {
 		j, _ := json.Marshal(v.Interface())
+		if bytes.Equal([]byte("true"), j) || bytes.Equal([]byte("false"), j) {
+			// because Python's boolean is capitalized
+			return bytes.Title(j)
+		}
 		return j
 	}
 
