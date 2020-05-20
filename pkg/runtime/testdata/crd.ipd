@@ -27,7 +27,16 @@ def install(ctx):
                     schema=apiextensionsv1beta1.CustomResourceValidation(
                         openAPIV3Schema=apiextensionsv1beta1.JSONSchemaProps(
                             type="object",
-                            properties={"spec":{"type":"object","properties":{"cronSpec":{"type":"string"},"image":{"type":"string"},"replicas":{"type":"integer"}}}},
+                            properties={
+                                "spec": apiextensionsv1beta1.JSONSchemaProps(
+                                    type="object",
+                                    properties={
+                                        "cronSpec": apiextensionsv1beta1.JSONSchemaProps(
+                                            type="string",
+                                        )
+                                    },
+                                )
+                            },
                         )
                     ),
                 )],

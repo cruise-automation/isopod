@@ -17,10 +17,6 @@ spec:
               properties:
                 cronSpec:
                   type: string
-                image:
-                  type: string
-                replicas:
-                  type: integer
   scope: Namespaced
   names:
     plural: crontabs

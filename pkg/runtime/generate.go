@@ -227,13 +227,32 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
-	if v.Kind() != reflect.Struct {
+	if v.Kind() != reflect.Struct && v.Kind() != reflect.Map {
 		j, _ := json.Marshal(v.Interface())
 		if bytes.Equal([]byte("true"), j) || bytes.Equal([]byte("false"), j) {
 			// because Python's boolean is capitalized
 			return bytes.Title(j)
 		}
 		return j
+	}
+
+	if v.Kind() == reflect.Map {
+		b.WriteString("{\n")
+		for i, key := range v.MapKeys() {
+			b.Write(indent1)
+			mapKey := a.genDataWithIndent(key, indent+1)
+			b.Write(mapKey)
+			b.WriteString(": ")
+			mapValue := a.genDataWithIndent(v.MapIndex(key), indent+1)
+			b.Write(mapValue)
+			if i != v.Len()-1 {
+				b.WriteString(",")
+			}
+			b.WriteString("\n")
+		}
+		b.Write(indentTopLevel)
+		b.WriteString("}")
+		return b.Bytes()
 	}
 
 	t := v.Type()

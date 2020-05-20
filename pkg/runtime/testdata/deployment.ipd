@@ -17,7 +17,9 @@ def install(ctx):
                 replicas=2,
                 template=corev1.PodTemplateSpec(
                     metadata=metav1.ObjectMeta(
-                        labels={"run":"my-nginx"},
+                        labels={
+                            "run": "my-nginx"
+                        },
                     ),
                     spec=corev1.PodSpec(
                         containers=[corev1.Container(

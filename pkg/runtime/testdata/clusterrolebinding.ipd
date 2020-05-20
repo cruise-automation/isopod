@@ -10,7 +10,9 @@ def install(ctx):
         data=[rbacv1.ClusterRoleBinding(
             metadata=metav1.ObjectMeta(
                 name="test-cluster-view",
-                labels={"app":"test-app"},
+                labels={
+                    "app": "test-app"
+                },
             ),
             subjects=[rbacv1.Subject(
                 kind="ServiceAccount",
