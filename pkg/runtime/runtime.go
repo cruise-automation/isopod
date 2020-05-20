@@ -49,6 +49,8 @@ const (
 	// TestCommand will run Isopod in unit test mode with external services
 	// stubbed with mocks.
 	TestCommand Command = "test"
+	// GenerateCommand is used to generate Starlark code from yaml input
+	GenerateCommand Command = "generate"
 
 	// ClustersStarFunc is the name of the function in Starlark that returns
 	// a list of Starlark built-ins that implement cloud.KubernetesVendor
@@ -57,8 +59,6 @@ const (
 	// AddonsStarFunc is the name of the function in Starlark that returns
 	// a list of addon() built-ins.
 	AddonsStarFunc = "addons"
-	// GenerateCommand is used to generate Starlark code from yaml input
-	GenerateCommand = "generate"
 )
 
 // Command is the type of the supported Isopod runtime command.

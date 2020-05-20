@@ -1,4 +1,4 @@
-// Copyright 2019 GM Cruise LLC
+// Copyright 2020 GM Cruise LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,28 +17,29 @@ package runtime
 import (
 	"fmt"
 	"io/ioutil"
+	"path"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
 
 func TestGenerate(t *testing.T) {
-	testdataPath := "../../testdata/generator/"
+	testdataPath := "testdata"
 	testcases := map[string]struct {
 		inputPath string
 		wantPath  string
 	}{
 		"Generate yaml": {
-			inputPath: testdataPath + "clusterrolebinding.yaml",
-			wantPath:  testdataPath + "clusterrolebinding.ipd",
+			inputPath: path.Join(testdataPath, "clusterrolebinding.yaml"),
+			wantPath:  path.Join(testdataPath, "clusterrolebinding.ipd"),
 		},
 		"Generate json": {
-			inputPath: testdataPath + "deployment.json",
-			wantPath:  testdataPath + "deployment.ipd",
+			inputPath: path.Join(testdataPath, "deployment.json"),
+			wantPath:  path.Join(testdataPath, "deployment.ipd"),
 		},
 		"Generate CRD": {
-			inputPath: testdataPath + "crd.yaml",
-			wantPath:  testdataPath + "crd.ipd",
+			inputPath: path.Join(testdataPath, "crd.yaml"),
+			wantPath:  path.Join(testdataPath, "crd.ipd"),
 		},
 	}
 

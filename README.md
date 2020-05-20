@@ -199,8 +199,10 @@ cumbersome to re-write huge yaml files in Starlark. So isopod offers a convenien
 based on a yaml or json input file containing any [kubernetes API object](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/):
 
 ```bash
-isopod generate testdata/clusterrolebinding.yaml > addon.ipd
+isopod generate runtime/testdata/clusterrolebinding.yaml > addon.ipd
 ```
+
+For now all `k8s.io` resources are supported.
 
 # Built-ins
 

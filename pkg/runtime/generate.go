@@ -1,4 +1,4 @@
-// Copyright 2019 GM Cruise LLC
+// Copyright 2020 GM Cruise LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,11 +23,11 @@ import (
 	"reflect"
 	"strings"
 
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"github.com/cruise-automation/isopod/pkg/kube"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
-	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
 const indentString = "    "
@@ -46,10 +46,7 @@ func Generate(path string) error {
 	yamlsOrJSONs := bytes.Split(yamlOrJSONFile, []byte(`---`))
 	a := newAddonFile()
 
-	scheme := k8sruntime.NewScheme()
-	_ = kubernetesscheme.AddToScheme(scheme)
-	_ = apiextensionsv1beta1.AddToScheme(scheme) // support for CRDs
-	decode := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode
+	decode := serializer.NewCodecFactory(kube.Scheme).UniversalDeserializer().Decode
 
 	for _, yamlOrJSON := range yamlsOrJSONs {
 		if len(bytes.TrimSpace(yamlOrJSON)) == 0 {
@@ -67,10 +64,19 @@ func Generate(path string) error {
 }
 
 type addonFile struct {
-	pkgMap  map[string]string
-	pkgs    []string
+	// pkgMap is a key value pair of the exact proto import path and a shorthand alias
+	pkgMap map[string]string
+	// pkgs is a list of proto import paths, that matches the keys of pkgMap. This list is used to persist the order
+	// across multiple runs
+	pkgs []string
+	// objects contains a list of all kubernetes objects parsed from the input
 	objects []k8sruntime.Object
-	names   []string
+	// names will be filled with the names of the objects. It's filled once genDataWithIndent() is called and the names
+	// will be populated into this slice. Later it will be injected into kub_put, but outside the data array.
+	// This separation is needed because all names will be discovered while uncovering object.Metadata during the data
+	// generation using reflect, but the names are needed outside of that, on a higher level. So the names are stored
+	// while they're discovered to avoid a second loop over object that drills down to name using reflect.
+	names []string
 }
 
 func newAddonFile() *addonFile {
@@ -84,37 +90,34 @@ func (a *addonFile) addObject(object k8sruntime.Object) {
 }
 
 func (a *addonFile) gen() []byte {
-	out := bytes.NewBuffer([]byte{})
-	out.WriteString("# vim: set syntax=python:\n\n")
+	buf := bytes.NewBuffer([]byte{})
+
+	// vim tag for github and vim to render the file nicely
+	buf.WriteString("# vim: set syntax=python:\n\n")
 
 	// imports
-	kubePut := a.getKubePut(1)
-	out.Write(a.getImports())
+	kubePut := a.genKubePutWithIndent(1)
+	buf.Write(a.genImports())
 
 	// install
-	out.WriteString("\ndef install(ctx):\n")
-	out.Write(kubePut)
+	buf.WriteString("\ndef install(ctx):\n")
+	buf.Write(kubePut)
 
 	// remove
-	kubeDelete := a.getKubeDelete(1)
+	kubeDelete := a.genKubeDeleteWithIndent(1)
 	if len(kubeDelete) > 0 {
-		out.WriteString("\ndef remove(ctx):\n")
-		out.Write(kubeDelete)
+		buf.WriteString("\ndef remove(ctx):\n")
+		buf.Write(kubeDelete)
 	}
 
-	return out.Bytes()
-}
-
-func (a *addonFile) getImports() []byte {
-	imports := bytes.NewBuffer([]byte{})
-	for _, pkg := range a.pkgs {
-		imports.WriteString(fmt.Sprintf("%s = proto.package(\"%s\")\n", a.pkgMap[pkg], pkg))
-	}
-	return imports.Bytes()
+	return buf.Bytes()
 }
 
 func (a *addonFile) addPkg(pkg string) string {
+	pkg = strings.ReplaceAll(pkg, "/", ".")
+	pkg = strings.ReplaceAll(pkg, "-", "_")
 	elems := strings.Split(pkg, ".")
+	// crate alias of last two package elements
 	if len(elems) > 1 {
 		elems = elems[len(elems)-2:]
 	}
@@ -127,12 +130,20 @@ func (a *addonFile) addPkg(pkg string) string {
 	return alias
 }
 
-func (a *addonFile) getKubePut(indent int) []byte {
+func (a *addonFile) genImports() []byte {
+	imports := bytes.NewBuffer([]byte{})
+	for _, pkg := range a.pkgs {
+		imports.WriteString(fmt.Sprintf("%s = proto.package(\"%s\")\n", a.pkgMap[pkg], pkg))
+	}
+	return imports.Bytes()
+}
+
+func (a *addonFile) genKubePutWithIndent(indent int) []byte {
 	indent1 := bytes.Repeat([]byte(indentString), indent)
 	indent2 := bytes.Repeat([]byte(indentString), indent+1)
 	kubePut := bytes.NewBuffer([]byte{})
 	for i, object := range a.objects {
-		data := a.getData(reflect.ValueOf(object), indent+2)
+		data := a.genDataWithIndent(reflect.ValueOf(object), indent+2)
 
 		kubePut.Write(indent1)
 		kubePut.WriteString("kube.put(\n")
@@ -166,7 +177,7 @@ func (a *addonFile) getKubePut(indent int) []byte {
 	return kubePut.Bytes()
 }
 
-func (a *addonFile) getKubeDelete(indent int) []byte {
+func (a *addonFile) genKubeDeleteWithIndent(indent int) []byte {
 	indent1 := bytes.Repeat([]byte(indentString), indent)
 	kubeDelete := bytes.NewBuffer([]byte{})
 	for _, object := range a.objects {
@@ -204,7 +215,7 @@ func (a *addonFile) getKubeDelete(indent int) []byte {
 	return kubeDelete.Bytes()
 }
 
-func (a *addonFile) getData(v reflect.Value, indent int) []byte {
+func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 	indent1 := bytes.Repeat([]byte(indentString), indent)
 	indentTopLevel := indent1
 	if indent > 0 {
@@ -227,7 +238,7 @@ func (a *addonFile) getData(v reflect.Value, indent int) []byte {
 
 	t := v.Type()
 	name, pkgPath := t.Name(), t.PkgPath()
-	alias := a.addPkg(strings.ReplaceAll(pkgPath, "/", "."))
+	alias := a.addPkg(pkgPath)
 	b.WriteString(alias + "." + name + "(\n")
 
 	for i := 0; i < v.NumField(); i++ {
@@ -239,41 +250,42 @@ func (a *addonFile) getData(v reflect.Value, indent int) []byte {
 
 			// add name in order for use in getKubePut
 			if t == reflect.TypeOf(v1.ObjectMeta{}) && jsonTag == "name" {
-				a.names = append(a.names, string(a.getData(vf, 0)))
+				a.names = append(a.names, string(a.genDataWithIndent(vf, 0)))
 			}
 
+			if jsonTag == "" || jsonTag == "apiGroup" {
+				continue
+			}
 			// add actual object
-			if jsonTag != "" && jsonTag != "apiGroup" {
-				b.Write(indent1)
-				b.WriteString(jsonTag)
-				b.WriteString("=")
+			b.Write(indent1)
+			b.WriteString(jsonTag)
+			b.WriteString("=")
 
-				if vf.Kind() == reflect.Slice {
-					b.WriteString("[")
-					for i := 0; i < vf.Len(); i++ {
-						if i != 0 {
-							b.Write(indent1)
-							if vf.Index(i).Kind() != reflect.Ptr && vf.Index(i).Kind() != reflect.Struct {
-								b.WriteString(indentString)
-							}
-						}
-						d := a.getData(vf.Index(i), indent+1)
-						b.Write(d)
-						if i != vf.Len()-1 {
-							b.WriteString(",\n")
+			if vf.Kind() == reflect.Slice {
+				b.WriteString("[")
+				for i := 0; i < vf.Len(); i++ {
+					if i != 0 {
+						b.Write(indent1)
+						if vf.Index(i).Kind() != reflect.Ptr && vf.Index(i).Kind() != reflect.Struct {
+							b.WriteString(indentString)
 						}
 					}
-					b.WriteString("]")
-				} else {
-					d := a.getData(vf, indent+1)
+					d := a.genDataWithIndent(vf.Index(i), indent+1)
 					b.Write(d)
+					if i != vf.Len()-1 {
+						b.WriteString(",\n")
+					}
 				}
-
-				if i != v.NumField()-1 {
-					b.WriteString(",")
-				}
-				b.WriteString("\n")
+				b.WriteString("]")
+			} else {
+				d := a.genDataWithIndent(vf, indent+1)
+				b.Write(d)
 			}
+
+			if i != v.NumField()-1 {
+				b.WriteString(",")
+			}
+			b.WriteString("\n")
 		}
 	}
 	b.Write(indentTopLevel)
