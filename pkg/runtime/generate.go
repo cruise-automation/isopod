@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/cruise-automation/isopod/pkg/kube"
@@ -238,7 +239,19 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 
 	if v.Kind() == reflect.Map {
 		b.WriteString("{\n")
-		for i, key := range v.MapKeys() {
+
+		// order maps for reproducability
+		var mapKeys []string
+		mapKeyValues := v.MapKeys()
+		for _, key := range mapKeyValues {
+			mapKeys = append(mapKeys, fmt.Sprintf("%v", key))
+		}
+		sort.Strings(mapKeys)
+		sort.SliceStable(mapKeyValues, func(i, j int) bool {
+			return mapKeys[i] < mapKeys[j]
+		})
+
+		for i, key := range mapKeyValues {
 			b.Write(indent1)
 			mapKey := a.genDataWithIndent(key, indent+1)
 			b.Write(mapKey)

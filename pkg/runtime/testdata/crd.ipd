@@ -33,6 +33,12 @@ def install(ctx):
                                     properties={
                                         "cronSpec": apiextensionsv1beta1.JSONSchemaProps(
                                             type="string",
+                                        ),
+                                        "image": apiextensionsv1beta1.JSONSchemaProps(
+                                            type="string",
+                                        ),
+                                        "replicas": apiextensionsv1beta1.JSONSchemaProps(
+                                            type="integer",
                                         )
                                     },
                                 )
