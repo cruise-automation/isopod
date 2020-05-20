@@ -23,9 +23,11 @@ import (
 	"reflect"
 	"strings"
 
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/scheme"
+	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 )
 
 const indentString = "    "
@@ -43,11 +45,16 @@ func Generate(path string) error {
 	}
 	yamlsOrJSONs := bytes.Split(yamlOrJSONFile, []byte(`---`))
 	a := newAddonFile()
+
+	scheme := k8sruntime.NewScheme()
+	_ = kubernetesscheme.AddToScheme(scheme)
+	_ = apiextensionsv1beta1.AddToScheme(scheme) // support for CRDs
+	decode := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode
+
 	for _, yamlOrJSON := range yamlsOrJSONs {
 		if len(bytes.TrimSpace(yamlOrJSON)) == 0 {
 			continue
 		}
-		decode := scheme.Codecs.UniversalDeserializer().Decode
 		obj, _, err := decode(yamlOrJSON, nil, nil)
 		if err != nil {
 			return err
@@ -83,17 +90,15 @@ func (a *addonFile) gen() []byte {
 	// imports
 	kubePut := a.getKubePut(1)
 	out.Write(a.getImports())
-	out.WriteString("\n")
 
 	// install
-	out.WriteString("def install(ctx):\n")
+	out.WriteString("\ndef install(ctx):\n")
 	out.Write(kubePut)
-	out.WriteString("\n")
 
 	// remove
 	kubeDelete := a.getKubeDelete(1)
 	if len(kubeDelete) > 0 {
-		out.WriteString("def remove(ctx):\n")
+		out.WriteString("\ndef remove(ctx):\n")
 		out.Write(kubeDelete)
 	}
 

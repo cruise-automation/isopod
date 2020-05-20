@@ -1,0 +1,31 @@
+{
+    "apiVersion": "extensions/v1beta1",
+    "kind": "Deployment",
+    "metadata": {
+        "name": "my-nginx",
+        "namespace": "default"
+    },
+    "spec": {
+        "replicas": 2,
+        "template": {
+            "metadata": {
+                "labels": {
+                    "run": "my-nginx"
+                }
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "image": "nginx",
+                        "name": "my-nginx",
+                        "ports": [
+                            {
+                                "containerPort": 80
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}

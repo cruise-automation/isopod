@@ -23,14 +23,37 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
-	got := ""
-	out = func(format string, a ...interface{}) { got = fmt.Sprintf(format, a...) }
-	err := Generate("../../testdata/clusterrolebinding.yaml")
-	if err != nil {
-		t.Fatal(err)
+	testdataPath := "../../testdata/generator/"
+	testcases := map[string]struct {
+		inputPath string
+		wantPath  string
+	}{
+		"Generate yaml": {
+			inputPath: testdataPath + "clusterrolebinding.yaml",
+			wantPath:  testdataPath + "clusterrolebinding.ipd",
+		},
+		"Generate json": {
+			inputPath: testdataPath + "deployment.json",
+			wantPath:  testdataPath + "deployment.ipd",
+		},
+		"Generate CRD": {
+			inputPath: testdataPath + "crd.yaml",
+			wantPath:  testdataPath + "crd.ipd",
+		},
 	}
-	want, _ := ioutil.ReadFile("../../testdata/clusterrolebinding.ipd")
-	if d := cmp.Diff(string(want), got); d != "" {
-		t.Errorf("Unexpected output (-want, +got):\n%s", d)
+
+	for name, test := range testcases {
+		t.Run(name, func(t *testing.T) {
+			got := ""
+			out = func(format string, a ...interface{}) { got = fmt.Sprintf(format, a...) }
+			err := Generate(test.inputPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want, _ := ioutil.ReadFile(test.wantPath)
+			if d := cmp.Diff(string(want), got); d != "" {
+				t.Errorf("Unexpected output (-want, +got):\n%s", d)
+			}
+		})
 	}
 }
