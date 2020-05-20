@@ -241,22 +241,23 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 		b.WriteString("{\n")
 
 		// order maps for reproducability
-		var mapKeys []string
-		mapKeyValues := v.MapKeys()
-		for _, key := range mapKeyValues {
-			mapKeys = append(mapKeys, fmt.Sprintf("%v", key))
+		var stringKeys []string
+		keyValues := v.MapKeys()
+		keyValueMap := map[string]reflect.Value{}
+		for _, keyValue := range keyValues {
+			stringKey := fmt.Sprintf("%v", keyValue)
+			stringKeys = append(stringKeys, stringKey)
+			keyValueMap[stringKey] = keyValue
 		}
-		sort.Strings(mapKeys)
-		sort.SliceStable(mapKeyValues, func(i, j int) bool {
-			return mapKeys[i] < mapKeys[j]
-		})
+		sort.Strings(stringKeys)
 
-		for i, key := range mapKeyValues {
+		for i, key := range stringKeys {
+			keyValue := keyValueMap[key]
 			b.Write(indent1)
-			mapKey := a.genDataWithIndent(key, indent+1)
+			mapKey := a.genDataWithIndent(keyValue, indent+1)
 			b.Write(mapKey)
 			b.WriteString(": ")
-			mapValue := a.genDataWithIndent(v.MapIndex(key), indent+1)
+			mapValue := a.genDataWithIndent(v.MapIndex(keyValue), indent+1)
 			b.Write(mapValue)
 			if i != v.Len()-1 {
 				b.WriteString(",")
