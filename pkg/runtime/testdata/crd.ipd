@@ -1,0 +1,54 @@
+# vim: set syntax=python:
+
+apiextensionsv1beta1 = proto.package("k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1beta1")
+metav1 = proto.package("k8s.io.apimachinery.pkg.apis.meta.v1")
+
+def install(ctx):
+    kube.put(
+        name="crontabs.stable.example.com",
+        api_group="apiextensions.k8s.io",
+        data=[apiextensionsv1beta1.CustomResourceDefinition(
+            metadata=metav1.ObjectMeta(
+                name="crontabs.stable.example.com",
+            ),
+            spec=apiextensionsv1beta1.CustomResourceDefinitionSpec(
+                group="stable.example.com",
+                names=apiextensionsv1beta1.CustomResourceDefinitionNames(
+                    plural="crontabs",
+                    singular="crontab",
+                    shortNames=["ct"],
+                    kind="CronTab",
+                ),
+                scope="Namespaced",
+                versions=[apiextensionsv1beta1.CustomResourceDefinitionVersion(
+                    name="v1",
+                    served=True,
+                    storage=True,
+                    schema=apiextensionsv1beta1.CustomResourceValidation(
+                        openAPIV3Schema=apiextensionsv1beta1.JSONSchemaProps(
+                            type="object",
+                            properties={
+                                "spec": apiextensionsv1beta1.JSONSchemaProps(
+                                    type="object",
+                                    properties={
+                                        "cronSpec": apiextensionsv1beta1.JSONSchemaProps(
+                                            type="string",
+                                        ),
+                                        "image": apiextensionsv1beta1.JSONSchemaProps(
+                                            type="string",
+                                        ),
+                                        "replicas": apiextensionsv1beta1.JSONSchemaProps(
+                                            type="integer",
+                                        )
+                                    },
+                                )
+                            },
+                        )
+                    ),
+                )],
+            ),
+        )]
+    )
+
+def remove(ctx):
+    kube.delete(customresourcedefinition="crontabs.stable.example.com", api_group="apiextensions.k8s.io")

@@ -1,0 +1,17 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: test-app
+  name: test-cluster-view
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: test-cluster-view
+subjects:
+- kind: ServiceAccount
+  name: test
+  namespace: default
+- kind: ServiceAccount
+  name: test2
+  namespace: default

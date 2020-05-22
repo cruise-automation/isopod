@@ -49,6 +49,8 @@ const (
 	// TestCommand will run Isopod in unit test mode with external services
 	// stubbed with mocks.
 	TestCommand Command = "test"
+	// GenerateCommand is used to generate Starlark code from yaml input
+	GenerateCommand Command = "generate"
 
 	// ClustersStarFunc is the name of the function in Starlark that returns
 	// a list of Starlark built-ins that implement cloud.KubernetesVendor

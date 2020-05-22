@@ -1,0 +1,36 @@
+{
+    "apiVersion": "apps/v1",
+    "kind": "Deployment",
+    "metadata": {
+        "name": "my-nginx",
+        "namespace": "default"
+    },
+    "spec": {
+        "replicas": 2,
+        "selector": {
+            "matchLabels": {
+                "app": "my-nginx"
+            }
+        },
+        "template": {
+            "metadata": {
+                "labels": {
+                    "run": "my-nginx"
+                }
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "image": "nginx",
+                        "name": "my-nginx",
+                        "ports": [
+                            {
+                                "containerPort": 80
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}

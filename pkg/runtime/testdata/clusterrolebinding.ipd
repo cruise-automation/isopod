@@ -1,0 +1,35 @@
+# vim: set syntax=python:
+
+rbacv1 = proto.package("k8s.io.api.rbac.v1")
+metav1 = proto.package("k8s.io.apimachinery.pkg.apis.meta.v1")
+
+def install(ctx):
+    kube.put(
+        name="test-cluster-view",
+        api_group="rbac.authorization.k8s.io",
+        data=[rbacv1.ClusterRoleBinding(
+            metadata=metav1.ObjectMeta(
+                name="test-cluster-view",
+                labels={
+                    "app": "test-app"
+                },
+            ),
+            subjects=[rbacv1.Subject(
+                kind="ServiceAccount",
+                name="test",
+                namespace="default"
+            ),
+            rbacv1.Subject(
+                kind="ServiceAccount",
+                name="test2",
+                namespace="default"
+            )],
+            roleRef=rbacv1.RoleRef(
+                kind="ClusterRole",
+                name="test-cluster-view"
+            )
+        )]
+    )
+
+def remove(ctx):
+    kube.delete(clusterrolebinding="test-cluster-view", api_group="rbac.authorization.k8s.io")

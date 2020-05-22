@@ -68,13 +68,14 @@ func usageAndDie() {
 By default, isopod targets all addons on all clusters. One may confine the
 selection with "--match_addons" and "--clusters_selector".
 
-Usage: %s [options] <command> <ENTRYFILE_PATH | TEST_PATH>
+Usage: %s [options] <command> <ENTRYFILE_PATH | TEST_PATH | INPUT_PATH>
 
 The following commands are supported:
 	install        install addons
 	remove         uninstall addons
 	list           list addons in the ENTRYFILE_PATH
 	test           run unit tests in TEST_PATH
+	generate       generate a Starlark addon file from yaml or json file at INPUT_PATH
 
 The following options are supported:
 `, os.Args[0])
@@ -203,6 +204,13 @@ func main() {
 		} else if !ok {
 			log.Flush()
 			os.Exit(1)
+		}
+		return
+	}
+
+	if cmd == runtime.GenerateCommand {
+		if err := runtime.Generate(path); err != nil {
+			log.Exitf("Failed to generate Starlark code: %v", err)
 		}
 		return
 	}
