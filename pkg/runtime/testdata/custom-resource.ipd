@@ -1,0 +1,11 @@
+# vim: set syntax=python:
+
+def install(ctx):
+    kube.put_yaml(
+        name="test-custom-resource",
+        namespace="default",
+        data=["""{"apiVersion":"stable.example.com/v1","kind":"CronTab","metadata":{"name":"test-custom-resource","namespace":"default"},"spec":{"cronSpec":"test-spec","deepField":{"attribute1":"foo","attribute2":2,"attribute3":true},"image":"test-image","replicas":1}}"""]
+    )
+
+def remove(ctx):
+    kube.delete(crontab="default/test-custom-resource", api_group="stable.example.com")
