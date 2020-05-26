@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	yaml2 "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 const indentString = "    "
@@ -56,23 +56,22 @@ func Generate(path string) error {
 			continue
 		}
 		obj, _, err := decode(yamlOrJSON, nil, nil)
-		if err != nil {
-			if k8sruntime.IsNotRegisteredError(err) {
-				if j, err := yaml2.ToJSON(yamlOrJSON); err == nil {
-					var u unstructured.Unstructured
-					if err := u.UnmarshalJSON(j); err == nil {
-						a.addObject(u)
-					} else {
-						return fmt.Errorf("couldn't unmarshal custom resource: %w", err)
-					}
-				} else {
-					return fmt.Errorf("couldn't extract json from input: %w", err)
-				}
-				continue
-			}
+		if err == nil {
+			a.addObject(obj)
+			continue
+		}
+		if !k8sruntime.IsNotRegisteredError(err) {
 			return err
 		}
-		a.addObject(obj)
+		j, err := yaml.ToJSON(yamlOrJSON)
+		if err != nil {
+			return fmt.Errorf("couldn't extract json from input: %w", err)
+		}
+		var u unstructured.Unstructured
+		if err := u.UnmarshalJSON(j); err != nil {
+			return fmt.Errorf("couldn't unmarshal custom resource: %w", err)
+		}
+		a.addObject(u)
 	}
 	starlark := a.gen()
 	out("%s", starlark)
