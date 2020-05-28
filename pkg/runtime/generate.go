@@ -27,8 +27,10 @@ import (
 	"github.com/cruise-automation/isopod/pkg/kube"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 const indentString = "    "
@@ -54,10 +56,22 @@ func Generate(path string) error {
 			continue
 		}
 		obj, _, err := decode(yamlOrJSON, nil, nil)
-		if err != nil {
+		if err == nil {
+			a.addObject(obj)
+			continue
+		}
+		if !k8sruntime.IsNotRegisteredError(err) {
 			return err
 		}
-		a.addObject(obj)
+		j, err := yaml.ToJSON(yamlOrJSON)
+		if err != nil {
+			return fmt.Errorf("couldn't extract json from input: %w", err)
+		}
+		var u unstructured.Unstructured
+		if err := u.UnmarshalJSON(j); err != nil {
+			return fmt.Errorf("couldn't unmarshal custom resource: %w", err)
+		}
+		a.addObject(u)
 	}
 	starlark := a.gen()
 	out("%s", starlark)
@@ -71,13 +85,19 @@ type addonFile struct {
 	// across multiple runs
 	pkgs []string
 	// objects contains a list of all kubernetes objects parsed from the input
-	objects []k8sruntime.Object
-	// names will be filled with the names of the objects. It's filled once genDataWithIndent() is called and the names
-	// will be populated into this slice. Later it will be injected into kub_put, but outside the data array.
-	// This separation is needed because all names will be discovered while uncovering object.Metadata during the data
-	// generation using reflect, but the names are needed outside of that, on a higher level. So the names are stored
-	// while they're discovered to avoid a second loop over object that drills down to name using reflect.
-	names []string
+	objects []interface{}
+	// metaData collects metadata for all objects that are needed for the delete statements. This metaData would be
+	// hard to acquire otherwise
+	metaData []metaData
+	// currentIndex points to current item in metaData and can be used in generation functions to add to metaData
+	currentIndex int
+}
+
+type metaData struct {
+	name      string
+	namespace string
+	group     string
+	kind      string
 }
 
 func newAddonFile() *addonFile {
@@ -86,7 +106,8 @@ func newAddonFile() *addonFile {
 	}
 }
 
-func (a *addonFile) addObject(object k8sruntime.Object) {
+func (a *addonFile) addObject(object interface{}) {
+	a.metaData = append(a.metaData, metaData{})
 	a.objects = append(a.objects, object)
 }
 
@@ -96,13 +117,14 @@ func (a *addonFile) gen() []byte {
 	// vim tag for github and vim to render the file nicely
 	buf.WriteString("# vim: set syntax=python:\n\n")
 
+	// has to be generated before imports, because packages are filled as walking through the objects
+	install := a.genInstall()
+
 	// imports
-	kubePut := a.genKubePutWithIndent(1)
 	buf.Write(a.genImports())
 
 	// install
-	buf.WriteString("\ndef install(ctx):\n")
-	buf.Write(kubePut)
+	buf.Write(install)
 
 	// remove
 	kubeDelete := a.genKubeDeleteWithIndent(1)
@@ -136,80 +158,124 @@ func (a *addonFile) genImports() []byte {
 	for _, pkg := range a.pkgs {
 		imports.WriteString(fmt.Sprintf("%s = proto.package(\"%s\")\n", a.pkgMap[pkg], pkg))
 	}
+	if len(a.pkgs) > 0 {
+		imports.Write([]byte("\n"))
+	}
 	return imports.Bytes()
 }
 
-func (a *addonFile) genKubePutWithIndent(indent int) []byte {
+func (a *addonFile) genInstall() []byte {
+	buf := bytes.NewBuffer([]byte{})
+	buf.WriteString("def install(ctx):\n")
+	for i, object := range a.objects {
+		switch o := object.(type) {
+		case k8sruntime.Object:
+			a.writeKubePutWithIndent(buf, o, 1)
+		case unstructured.Unstructured:
+			a.writeKubePutYAMLWithIndent(buf, o, 1)
+		}
+		if i != len(a.objects)-1 {
+			buf.WriteString("\n")
+		}
+		a.currentIndex++
+	}
+	return buf.Bytes()
+}
+
+func (a *addonFile) writeKubePutWithIndent(kubePut *bytes.Buffer, object k8sruntime.Object, indent int) []byte {
 	indent1 := bytes.Repeat([]byte(indentString), indent)
 	indent2 := bytes.Repeat([]byte(indentString), indent+1)
-	kubePut := bytes.NewBuffer([]byte{})
-	for i, object := range a.objects {
-		data := a.genDataWithIndent(reflect.ValueOf(object), indent+2)
+	data := a.genDataWithIndent(reflect.ValueOf(object), indent+2)
 
-		kubePut.Write(indent1)
-		kubePut.WriteString("kube.put(\n")
+	group := object.GetObjectKind().GroupVersionKind().Group
+	kind := object.GetObjectKind().GroupVersionKind().Kind
 
-		// name
+	a.metaData[a.currentIndex].group = group
+	a.metaData[a.currentIndex].kind = kind
+
+	kubePut.Write(indent1)
+	kubePut.WriteString("kube.put(\n")
+
+	// name
+	kubePut.Write(indent2)
+	kubePut.WriteString("name=\"" + a.metaData[a.currentIndex].name + "\",\n")
+
+	// api_group
+	if group != "" {
 		kubePut.Write(indent2)
-		kubePut.WriteString("name=")
-		kubePut.WriteString(a.names[i])
-		kubePut.WriteString(",\n")
-
-		// api_group
-		apiGroup := object.GetObjectKind().GroupVersionKind().Group
-		if apiGroup != "" {
-			kubePut.Write(indent2)
-			kubePut.WriteString("api_group=\"" + apiGroup + "\",\n")
-		}
-
-		// data
-		kubePut.Write(indent2)
-		kubePut.WriteString("data=[")
-		kubePut.Write(data)
-		kubePut.WriteString("]\n")
-
-		kubePut.Write(indent1)
-		kubePut.WriteString(")\n")
-
-		if i != len(a.objects)-1 {
-			kubePut.WriteString("\n")
-		}
+		kubePut.WriteString("api_group=\"" + group + "\",\n")
 	}
+
+	// data
+	kubePut.Write(indent2)
+	kubePut.WriteString("data=[")
+	kubePut.Write(data)
+	kubePut.WriteString("]\n")
+
+	kubePut.Write(indent1)
+	kubePut.WriteString(")\n")
+
 	return kubePut.Bytes()
+}
+
+func (a *addonFile) writeKubePutYAMLWithIndent(kubePutYAML *bytes.Buffer, c unstructured.Unstructured, indent int) []byte {
+	indent1 := bytes.Repeat([]byte(indentString), indent)
+	indent2 := bytes.Repeat([]byte(indentString), indent+1)
+	name := c.GetName()
+	namespace := c.GetNamespace()
+	group := c.GroupVersionKind().Group
+	kind := c.GroupVersionKind().Kind
+
+	a.metaData[a.currentIndex] = metaData{
+		name:      name,
+		namespace: namespace,
+		group:     group,
+		kind:      kind,
+	}
+
+	kubePutYAML.Write(indent1)
+	kubePutYAML.WriteString("kube.put_yaml(\n")
+
+	// name
+	kubePutYAML.Write(indent2)
+	kubePutYAML.WriteString("name=\"" + name + "\",\n")
+
+	// namespace
+	if namespace != "" {
+		kubePutYAML.Write(indent2)
+		kubePutYAML.WriteString("namespace=\"" + namespace + "\",\n")
+	}
+
+	// data
+	kubePutYAML.Write(indent2)
+	kubePutYAML.WriteString(`data=["""`)
+	// error can be safely ignored here cause at this point we know it's a valid structure
+	j, _ := c.MarshalJSON()
+	j = bytes.TrimSpace(j)
+	kubePutYAML.Write(j)
+	kubePutYAML.WriteString(`"""]` + "\n")
+
+	kubePutYAML.Write(indent1)
+	kubePutYAML.WriteString(")\n")
+	return kubePutYAML.Bytes()
 }
 
 func (a *addonFile) genKubeDeleteWithIndent(indent int) []byte {
 	indent1 := bytes.Repeat([]byte(indentString), indent)
 	kubeDelete := bytes.NewBuffer([]byte{})
-	for _, object := range a.objects {
-		v := reflect.ValueOf(object)
-		if v.Kind() == reflect.Ptr {
-			v = v.Elem()
-		}
-		typeMeta := v.FieldByName("TypeMeta")
-		objectMeta := v.FieldByName("ObjectMeta")
-		if typeMeta.IsZero() || objectMeta.IsZero() {
-			continue
-		}
-		kind := typeMeta.FieldByName("Kind")
-		name := objectMeta.FieldByName("Name")
-		namespace := objectMeta.FieldByName("Namespace")
-		apiGroup := object.GetObjectKind().GroupVersionKind().Group
-		if kind.IsZero() || name.IsZero() {
-			continue
-		}
+	for _, object := range a.metaData {
 		kubeDelete.Write(indent1)
 		kubeDelete.WriteString("kube.delete(")
-		kubeDelete.WriteString(strings.ToLower(kind.String()))
+		kubeDelete.WriteString(strings.ToLower(object.kind))
 		kubeDelete.WriteString("=\"")
-		if !namespace.IsZero() {
-			kubeDelete.WriteString(namespace.String())
+		if object.namespace != "" {
+			kubeDelete.WriteString(object.namespace)
 			kubeDelete.WriteString("/")
 		}
-		kubeDelete.WriteString(name.String())
+		kubeDelete.WriteString(object.name)
 		kubeDelete.WriteString("\"")
-		if apiGroup != "" {
-			kubeDelete.WriteString(fmt.Sprintf(", api_group=\"%s\"", apiGroup))
+		if object.group != "" {
+			kubeDelete.WriteString(fmt.Sprintf(", api_group=\"%s\"", object.group))
 		}
 		kubeDelete.WriteString(")\n")
 	}
@@ -281,9 +347,14 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 			// this is even a slice of len 1, if jsonTag is "". So accessing 0 index is safe
 			jsonTag = strings.Split(jsonTag, ",")[0]
 
-			// add name in order for use in getKubePut
-			if t == reflect.TypeOf(v1.ObjectMeta{}) && jsonTag == "name" {
-				a.names = append(a.names, string(a.genDataWithIndent(vf, 0)))
+			// add name and namespace to metadata of object
+			if t == reflect.TypeOf(v1.ObjectMeta{}) {
+				switch jsonTag {
+				case "name":
+					a.metaData[a.currentIndex].name = vf.String()
+				case "namespace":
+					a.metaData[a.currentIndex].namespace = vf.String()
+				}
 			}
 
 			if jsonTag == "" || jsonTag == "apiGroup" {

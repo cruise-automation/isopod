@@ -37,3 +37,35 @@ spec:
     kind: CronTab
     shortNames:
       - ct
+---
+apiVersion: stable.example.com/v1
+kind: CronTab
+metadata:
+  name: test-custom-resource
+  namespace: default
+spec:
+  cronSpec: test-spec
+  image: test-image
+  replicas: 1
+  deepField:
+    attribute1: foo
+    attribute2: 2
+    attribute3: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: test-app
+  name: test-cluster-view
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: test-cluster-view
+subjects:
+  - kind: ServiceAccount
+    name: test
+    namespace: default
+  - kind: ServiceAccount
+    name: test2
+    namespace: default

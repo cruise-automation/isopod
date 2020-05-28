@@ -1,1 +1,8 @@
 isopod*
+
+# IDEs
+.idea
+.vscode
+
+# local directories
+local

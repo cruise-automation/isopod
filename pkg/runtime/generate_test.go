@@ -29,17 +29,29 @@ func TestGenerate(t *testing.T) {
 		inputPath string
 		wantPath  string
 	}{
-		"Generate yaml": {
+		"yaml": {
 			inputPath: path.Join(testdataPath, "clusterrolebinding.yaml"),
 			wantPath:  path.Join(testdataPath, "clusterrolebinding.ipd"),
 		},
-		"Generate json": {
+		"json": {
 			inputPath: path.Join(testdataPath, "deployment.json"),
 			wantPath:  path.Join(testdataPath, "deployment.ipd"),
 		},
-		"Generate CRD": {
+		"CRD": {
 			inputPath: path.Join(testdataPath, "crd.yaml"),
 			wantPath:  path.Join(testdataPath, "crd.ipd"),
+		},
+		"custom resource yaml": {
+			inputPath: path.Join(testdataPath, "custom-resource.yaml"),
+			wantPath:  path.Join(testdataPath, "custom-resource.ipd"),
+		},
+		"custom resource json": {
+			inputPath: path.Join(testdataPath, "custom-resource.json"),
+			wantPath:  path.Join(testdataPath, "custom-resource.ipd"),
+		},
+		"multiple": {
+			inputPath: path.Join(testdataPath, "multiple.yaml"),
+			wantPath:  path.Join(testdataPath, "multiple.ipd"),
 		},
 	}
 

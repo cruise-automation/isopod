@@ -1,0 +1,18 @@
+{
+    "apiVersion": "stable.example.com/v1",
+    "kind": "CronTab",
+    "metadata": {
+        "name": "test-custom-resource",
+        "namespace": "default"
+    },
+    "spec": {
+        "cronSpec": "test-spec",
+        "deepField": {
+            "attribute1": "foo",
+            "attribute2": 2,
+            "attribute3": true
+        },
+        "image": "test-image",
+        "replicas": 1
+    }
+}
