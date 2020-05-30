@@ -1,0 +1,13 @@
+# vim: set syntax=python:
+
+git_repository(
+    name="isopod",
+    commit="dbe211be57bc27b947ab3e64568ecc94c23a9439",
+    remote="https://github.com/cruise-automation/isopod.git",
+)
+
+git_repository(
+    name="another_isopod",
+    commit="617ccb777cbe72c7a122fa246e64a0fb3077f48b",
+    remote="https://github.com/cruise-automation/isopod.git",
+)

@@ -15,8 +15,8 @@
 # limitations under the License.
 
 
-load("ingress.ipd", "install")
-
+load("@isopod//testdata/ingress.ipd", "install")
+load("@another_isopod//testdata/clusters.star", "CLUSTERS")
 
 def test_install(t):
     vault.write("secret/car/cert", crt="foobar")
@@ -30,3 +30,7 @@ def test_install(t):
 
     assert(ns.metadata.name == "foobar", "fail")
     assert(ns.metadata.labels["foo"] == "bar", "fail")
+
+
+def test_clusters(t):
+    assert(CLUSTERS[0].project == "cruise-paas-dev", "fail")

@@ -101,7 +101,6 @@ func init() {
 }
 
 // New returns new Runtime object from path with opts.
-// TODO (cxu) refactor Config to Runtime and this param list to Config.
 func New(c *Config, opts ...Option) (Runtime, error) {
 	if err := Validate(c); err != nil {
 		return nil, err

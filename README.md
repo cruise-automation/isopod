@@ -35,6 +35,8 @@ hermetic, and extensible solution to configuration management in Kubernetes.
       - [`gke()`](#gke)
       - [`onprem()`](#onprem)
   - [Addons](#addons)
+  - [Generate Addons](#generate-addons)
+- [Load Remote Isopod Modules](#load-remote-isopod-modules)
 - [Built-ins](#built-ins)
   - [kube](#kube)
     - [Methods:](#methods)
@@ -203,6 +205,49 @@ isopod generate runtime/testdata/clusterrolebinding.yaml > addon.ipd
 ```
 
 For now all `k8s.io` resources are supported.
+
+
+# Load Remote Isopod Modules
+
+Similar to Bazel `WORKSPACE` file, `isopod.deps` file allows you to define remote
+and versioned git modules to import to local modules. For example,
+
+```python
+git_repository(
+    name="isopod_tools",
+    commit="dbe211be57bc27b947ab3e64568ecc94c23a9439",
+    remote="https://github.com/cruise-automation/isopod.git",
+)
+```
+
+To import remote modules, use `load("@target_name//path/to/file", "foo", "bar")`,
+for example,
+
+```python
+load("@isopod_tools//examples/helpers.ipd",
+     "health_probe", "env_from_field", "container_port")
+
+...
+spec=corev1.PodSpec(
+    containers=[corev1.Container(
+        name="nginx-ingress-controller",
+        image="quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.22.0",
+        env=[
+            env_from_field("POD_NAME", "metadata.name"),
+            env_from_field("POD_NAMESPACE", "metadata.namespace"),
+        ],
+        livenessProbe=health_probe(10254),
+        readinessProbe=health_probe(10254),
+        ports=[
+            container_port("http", 80),
+            container_port("https", 443),
+            container_port("metrics", 10254),
+        ],
+    )],
+)
+```
+
+By default Isopod uses `$(pwd)/isopod.deps`, which you can override with `--deps` flag.
 
 # Built-ins
 
