@@ -165,8 +165,7 @@ git remote add origin "{{.GitRemoteURL}}"
 		return "", fmt.Errorf("failed to parse git-clone shell script template: %v", err)
 	}
 	var sb strings.Builder
-	tpl.Execute(&sb, params)
-	if err != nil {
+	if err = tpl.Execute(&sb, params); err != nil {
 		return "", fmt.Errorf("failed to render git-clone shell script template: %v", err)
 	}
 	return sb.String(), nil

@@ -209,7 +209,7 @@ For now all `k8s.io` resources are supported.
 
 # Load Remote Isopod Modules
 
-Similar to Bazel `WORKSPACE` file, `isopod.deps` file allows you to define remote
+Similar to Bazel's `WORKSPACE` file, the `isopod.deps` file allows you to define remote
 and versioned git modules to import to local modules. For example,
 
 ```python

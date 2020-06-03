@@ -66,7 +66,7 @@ func init() {
 	if *depsFile == "" {
 		workingDir, err := os.Getwd()
 		if err != nil {
-			log.Fatalf("Failed to working dir: %v", err)
+			log.Fatalf("Failed to get working dir: %v", err)
 		}
 		defaultDepsFilePath := filepath.Join(workingDir, dep.DepsFile)
 
