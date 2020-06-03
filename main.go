@@ -68,13 +68,13 @@ func init() {
 		if err != nil {
 			log.Fatalf("Failed to working dir: %v", err)
 		}
-		guess := filepath.Join(workingDir, dep.DepsFile)
+		defaultDepsFilePath := filepath.Join(workingDir, dep.DepsFile)
 
-		if _, err = os.Stat(guess); os.IsNotExist(err) {
+		if _, err = os.Stat(defaultDepsFilePath); os.IsNotExist(err) {
 			log.Info("Using no remote modules")
 			return
 		}
-		*depsFile = guess
+		*depsFile = defaultDepsFilePath
 	}
 }
 

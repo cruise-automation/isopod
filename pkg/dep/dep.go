@@ -38,7 +38,9 @@ var (
 	Workspace = "/tmp/isopod-workspace"
 )
 
-// AbstractDependency contains the common impl of all KubernetesVendor.
+// AbstractDependency contains the common impl of all loader.Dependency.
+// Specifically, it offers easy parsing of
+//     dependency_directive(foo="bar", baz="qux")
 type AbstractDependency struct {
 	*addon.SkyCtx
 	typeStr string
@@ -90,7 +92,11 @@ func Load(entryfile string) error {
 		Load: loader.NewModulesLoaderWithPredeclaredPkgs(filepath.Dir(entryfile), pkgs).Load,
 	}
 
-	bytes, err := ioutil.ReadFile(entryfile)
+	absPath, err := filepath.Abs(entryfile)
+	if err != nil {
+		return err
+	}
+	bytes, err := ioutil.ReadFile(absPath)
 	if err != nil {
 		return err
 	}

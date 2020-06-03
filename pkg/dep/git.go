@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	log "github.com/golang/glog"
 	"go.starlark.net/starlark"
@@ -85,8 +86,15 @@ func (g *GitRepo) LocalDir() string {
 // Fetch is part of the Dependency interface.
 // It downloads the source of this dependency.
 func (g *GitRepo) Fetch() error {
-	outputDir := g.LocalDir()
-	if _, err := Shellf(gitCloneShellScript(outputDir, g.remote, g.commit)); err != nil {
+	script, err := gitCloneShellScript(&GitCloneParams{
+		OutputDir:    g.LocalDir(),
+		GitRemoteURL: g.remote,
+		GitCommitSHA: g.commit,
+	})
+	if err != nil {
+		return err
+	}
+	if _, err := Shellf(script); err != nil {
 		return fmt.Errorf("failed to clone git repo `%v': %v", g.name, err)
 	}
 	return nil
@@ -126,38 +134,40 @@ func Shellf(format string, a ...interface{}) (string, error) {
 	return string(bytes), err
 }
 
-// gitCloneBashScript is a bash script to fetch Git files of a repo at a given commit sha, to a given path.
-func gitCloneShellScript(outputDir, gitRemoteURL, gitCommitSHA string) string {
-	variables := fmt.Sprintf(`
-	OUTPUT_DIR="%s"
-	GIT_REMOTE_URL="%s"
-	GIT_COMMIT_SHA="%s"
-`, outputDir, gitRemoteURL, gitCommitSHA)
+// GitCloneParams is used to templatize git clone command.
+type GitCloneParams struct {
+	OutputDir, GitRemoteURL, GitCommitSHA string
+}
+
+// gitCloneBashScript composes a shell script to clone a repo at a given commit sha.
+func gitCloneShellScript(params *GitCloneParams) (string, error) {
 	script := `
 set -e
-if [ -d "${OUTPUT_DIR}" ]
-then
-  # ${OUTPUT_DIR} already exists, meaning dependency version unchanged.
+if [ -d "{{.OutputDir}}" ]; then
+  # {{.OutputDir}} already exists, meaning dependency version unchanged.
   exit 0
 fi
 
-mkdir -p "${OUTPUT_DIR}"
-cd "${OUTPUT_DIR}"
+mkdir -p "{{.OutputDir}}"
+cd "{{.OutputDir}}"
 
 git init
+git remote add origin "{{.GitRemoteURL}}"
 
-# GIT_REMOTE_URL is expected to have authentication in it
-# it should be in the form of https://token@%repo.domain.git
-git remote add origin "${GIT_REMOTE_URL}"
-
-# try to fetch this single commit first
-# this works for when there is a ref pointing at this commit
-# for most commits that are newly pushed, this is the case
-# because there is a head (branch) pointint at it
-# if no ref points at that commit sha, fetch the entire repo
-# this is common when rebuilding for an arbituary commit sha
-(git fetch origin "${GIT_COMMIT_SHA}" && git reset --hard FETCH_HEAD) || \
-(git fetch origin && git checkout "${GIT_COMMIT_SHA}")
+# Try to fetch just the specified commit first, which only works if there is a ref
+# pointing at this commit. This is true for commits that were just pushed.
+# Otherwise, fetch the entire repo history, which supports checking out arbituary commits.
+(git fetch origin "{{.GitCommitSHA}}" && git reset --hard FETCH_HEAD) || \
+(git fetch origin && git checkout "{{.GitCommitSHA}}")
 `
-	return strings.Join([]string{variables, script}, "\n")
+	tpl, err := template.New("script").Parse(script)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse git-clone shell script template: %v", err)
+	}
+	var sb strings.Builder
+	tpl.Execute(&sb, params)
+	if err != nil {
+		return "", fmt.Errorf("failed to render git-clone shell script template: %v", err)
+	}
+	return sb.String(), nil
 }
