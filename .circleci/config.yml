@@ -48,7 +48,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
-      - run: VAULT_TOKEN=not-used bin/isopod-linux test
+      - run: VAULT_TOKEN=not-used bin/isopod-linux --deps testdata/isopod.deps test
 
   publish:
     docker:

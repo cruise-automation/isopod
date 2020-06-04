@@ -1,4 +1,7 @@
-isopod*
+# Ignore binary output such as `isopod-v1.2.3', `isopod-linux', etc.
+# It does not generalize to `isopod*' because `isopod.deps' matches it.
+isopod
+isopod-*
 
 # IDEs
 .idea

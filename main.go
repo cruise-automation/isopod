@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/cruise-automation/isopod/pkg/cloud"
+	"github.com/cruise-automation/isopod/pkg/dep"
 	"github.com/cruise-automation/isopod/pkg/runtime"
 	store "github.com/cruise-automation/isopod/pkg/store/kube"
 	"github.com/cruise-automation/isopod/pkg/util"
@@ -55,11 +56,26 @@ var (
 	kubeDiffFilterFile = flag.String("kube_diff_filter_file", "", "Path to a file of filters delimited by new lines.")
 	showVersion        = flag.Bool("version", false, "Print binary version/system information and exit(0).")
 	relativePath       = flag.String("rel_path", "", "The base path used to interpret double slash prefix.")
+	depsFile           = flag.String("deps", "", "Path to isopod.deps")
 )
 
 func init() {
 	flag.Parse()
 	stdlog.SetFlags(stdlog.Lshortfile)
+	// If depsFile unset, and if $(pwd)/isopod.deps exists, update depsFile.
+	if *depsFile == "" {
+		workingDir, err := os.Getwd()
+		if err != nil {
+			log.Fatalf("Failed to get working dir: %v", err)
+		}
+		defaultDepsFilePath := filepath.Join(workingDir, dep.DepsFile)
+
+		if _, err = os.Stat(defaultDepsFilePath); os.IsNotExist(err) {
+			log.Info("Using no remote modules")
+			return
+		}
+		*depsFile = defaultDepsFilePath
+	}
 }
 
 func usageAndDie() {
@@ -196,6 +212,13 @@ func main() {
 	}
 
 	cmd, path := getCmdAndPath(flag.Args())
+
+	if *depsFile != "" {
+		log.Infof("Loading dependencies from `%s'", *depsFile)
+		if err := dep.Load(*depsFile); err != nil {
+			log.Exitf("Failed to load deps file `%s': %v", *depsFile, err)
+		}
+	}
 
 	if cmd == runtime.TestCommand {
 		ok, err := runtime.RunUnitTests(ctx, path, os.Stdout, os.Stderr)

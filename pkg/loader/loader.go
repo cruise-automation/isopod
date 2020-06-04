@@ -21,10 +21,36 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	log "github.com/golang/glog"
 	"go.starlark.net/starlark"
 )
+
+var (
+	// dependencies map from dep name to the actual Dependency.
+	// It is useful to resolve to remote load statement.
+	//     load("@remote_repo//path/to/module.ipd", "foo", "bar")
+	dependencies = make(map[string]Dependency)
+)
+
+// Register registers a dependency with the loader.
+func Register(dep Dependency) {
+	dependencies[dep.Name()] = dep
+}
+
+// Dependency defines a remote Isopod module to be loaded to the local project.
+type Dependency interface {
+	// Fetch downloads the source of this dependency.
+	// Fetch must be idempotent.
+	Fetch() error
+
+	// Name returns the name of this dependency.
+	Name() string
+
+	// LocalDir returns the path to the directory storing the source.
+	LocalDir() string
+}
 
 // ModulesLoader defines the interface to interact with a ModulesLoader.
 type ModulesLoader interface {
@@ -99,6 +125,26 @@ func (l *modulesLoader) anchoredLoadFn(
 		default:
 			return nil, fmt.Errorf("unknown file extension: %s", ext)
 		}
+
+		fullModule := module
+		if strings.HasPrefix(module, "@") {
+			idx := strings.Index(module, "//")
+			if idx < 0 {
+				return nil, fmt.Errorf("remote module must contain double slash")
+			}
+			moduleName := module[1:strings.Index(module, "//")]
+			dep, ok := dependencies[moduleName]
+			if !ok {
+				return nil, fmt.Errorf("`%s' is not registered", moduleName)
+			}
+			log.Infof("Fetching module `%s'", moduleName)
+			if err := dep.Fetch(); err != nil {
+				return nil, fmt.Errorf("failed to fetch module `%s': %v", moduleName, err)
+			}
+			baseDir = dep.LocalDir()
+			module = module[idx+2:] // suffix after double slash
+		}
+
 		readerFn := NewFileReaderFactory(baseDir)
 		if mockReaderFn != nil {
 			readerFn = *mockReaderFn
@@ -121,7 +167,7 @@ func (l *modulesLoader) anchoredLoadFn(
 		m = &Module{globals: globals, data: data, err: err}
 
 		// Update the cache.
-		l.loaded[module] = m
+		l.loaded[fullModule] = m
 		return m.globals, m.err
 	}
 }

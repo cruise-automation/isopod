@@ -1,6 +1,6 @@
 # vim: set syntax=python:
 
-# Copyright 2019 GM Cruise LLC
+# Copyright 2020 GM Cruise LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,23 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+git_repository(
+    name="isopod",
+    commit="dbe211be57bc27b947ab3e64568ecc94c23a9439",
+    remote="https://github.com/cruise-automation/isopod.git",
+)
 
-load("@isopod//testdata/ingress.ipd", "install")
-load("@another_isopod//testdata/clusters.star", "CLUSTERS")
-
-def test_install(t):
-    vault.write("secret/car/cert", crt="foobar")
-    assert(vault.exist("secret/car/cert"), "fail")
-
-    t.ctx.namespace = "foobar"
-
-    install(t.ctx)
-
-    ns = kube.get(namespace="foobar")
-
-    assert(ns.metadata.name == "foobar", "fail")
-    assert(ns.metadata.labels["foo"] == "bar", "fail")
-
-
-def test_clusters(t):
-    assert(CLUSTERS[0].project == "cruise-paas-dev", "fail")
+git_repository(
+    name="another_isopod",
+    commit="617ccb777cbe72c7a122fa246e64a0fb3077f48b",
+    remote="https://github.com/cruise-automation/isopod.git",
+)
