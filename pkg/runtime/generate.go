@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -343,13 +344,17 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 	for i := 0; i < v.NumField(); i++ {
 		vf := v.Field(i)
 		if !vf.IsZero() {
-			jsonTag := t.Field(i).Tag.Get("json")
-			// this is even a slice of len 1, if jsonTag is "". So accessing 0 index is safe
-			jsonTag = strings.Split(jsonTag, ",")[0]
+			protoTag := t.Field(i).Tag.Get("protobuf")
+			r := regexp.MustCompile(`name=([\w\d]+)`)
+			groups := r.FindStringSubmatch(protoTag)
+			var protoName string
+			if len(groups) == 2 {
+				protoName = groups[1]
+			}
 
 			// add name and namespace to metadata of object
 			if t == reflect.TypeOf(v1.ObjectMeta{}) {
-				switch jsonTag {
+				switch protoName {
 				case "name":
 					a.metaData[a.currentIndex].name = vf.String()
 				case "namespace":
@@ -357,12 +362,12 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 				}
 			}
 
-			if jsonTag == "" || jsonTag == "apiGroup" {
+			if protoName == "" || protoName == "apiGroup" {
 				continue
 			}
 			// add actual object
 			b.Write(indent1)
-			b.WriteString(jsonTag)
+			b.WriteString(protoName)
 			b.WriteString("=")
 
 			if vf.Kind() == reflect.Slice {
