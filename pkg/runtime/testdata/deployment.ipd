@@ -3,6 +3,7 @@
 appsv1 = proto.package("k8s.io.api.apps.v1")
 metav1 = proto.package("k8s.io.apimachinery.pkg.apis.meta.v1")
 corev1 = proto.package("k8s.io.api.core.v1")
+utilintstr = proto.package("k8s.io.apimachinery.pkg.util.intstr")
 
 def install(ctx):
     kube.put(
@@ -33,6 +34,17 @@ def install(ctx):
                             ports=[corev1.ContainerPort(
                                 containerPort=80,
                             )],
+                            livenessProbe=corev1.Probe(
+                                handler=corev1.Handler(
+                                    httpGet=corev1.HTTPGetAction(
+                                        path="/healthz",
+                                        port=utilintstr.IntOrString(
+                                            intVal=8080,
+                                        ),
+                                        scheme="HTTPS",
+                                    ),
+                                ),
+                            ),
                         )],
                     )
                 ),
