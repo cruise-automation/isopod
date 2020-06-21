@@ -235,6 +235,11 @@ func (a *addonFile) writeKubePutYAMLWithIndent(kubePutYAML *bytes.Buffer, c unst
 	}
 
 	kubePutYAML.Write(indent1)
+	kubePutYAML.WriteString("data=")
+	kubePutYAML.Write(a.genStarlarkStructWithIndent(c.Object, indent))
+	kubePutYAML.WriteString("\n")
+
+	kubePutYAML.Write(indent1)
 	kubePutYAML.WriteString("kube.put_yaml(\n")
 
 	// name
@@ -249,12 +254,9 @@ func (a *addonFile) writeKubePutYAMLWithIndent(kubePutYAML *bytes.Buffer, c unst
 
 	// data
 	kubePutYAML.Write(indent2)
-	kubePutYAML.WriteString(`data=["""`)
-	// error can be safely ignored here cause at this point we know it's a valid structure
-	j, _ := c.MarshalJSON()
-	j = bytes.TrimSpace(j)
-	kubePutYAML.Write(j)
-	kubePutYAML.WriteString(`"""]` + "\n")
+	kubePutYAML.WriteString(`data=[`)
+	kubePutYAML.WriteString("data.to_json()")
+	kubePutYAML.WriteString(`]` + "\n")
 
 	kubePutYAML.Write(indent1)
 	kubePutYAML.WriteString(")\n")
@@ -398,6 +400,40 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 		}
 	}
 	b.Write(indentTopLevel)
+	b.WriteString(")")
+	return b.Bytes()
+}
+
+func (a *addonFile) genStarlarkStructWithIndent(object interface{}, indent int) []byte {
+	indent1 := bytes.Repeat([]byte(indentString), indent)
+	indent2 := bytes.Repeat([]byte(indentString), indent+1)
+	b := bytes.NewBuffer([]byte{})
+
+	if reflect.ValueOf(object).Kind() != reflect.Map {
+		j, _ := json.Marshal(object)
+		if bytes.Equal([]byte("true"), j) || bytes.Equal([]byte("false"), j) {
+			// because Python's boolean is capitalized
+			return bytes.Title(j)
+		}
+		return j
+	}
+
+	// order maps for reproducability
+	m := object.(map[string]interface{})
+	var keys []string
+	for key := range m {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	b.WriteString("struct(\n")
+	for _, key := range keys {
+		b.Write(indent2)
+		b.WriteString(key + "=")
+		b.Write(a.genStarlarkStructWithIndent(m[key], indent+1))
+		b.WriteString(",\n")
+	}
+	b.Write(indent1)
 	b.WriteString(")")
 	return b.Bytes()
 }

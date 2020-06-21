@@ -65,10 +65,28 @@ def install(ctx):
         )]
     )
 
+    data=struct(
+        apiVersion="stable.example.com/v1",
+        kind="CronTab",
+        metadata=struct(
+            name="test-custom-resource",
+            namespace="default",
+        ),
+        spec=struct(
+            cronSpec="test-spec",
+            deepField=struct(
+                attribute1="foo",
+                attribute2=2,
+                attribute3=True,
+            ),
+            image="test-image",
+            replicas=1,
+        ),
+    )
     kube.put_yaml(
         name="test-custom-resource",
         namespace="default",
-        data=["""{"apiVersion":"stable.example.com/v1","kind":"CronTab","metadata":{"name":"test-custom-resource","namespace":"default"},"spec":{"cronSpec":"test-spec","deepField":{"attribute1":"foo","attribute2":2,"attribute3":true},"image":"test-image","replicas":1}}"""]
+        data=[data.to_json()]
     )
 
     kube.put(
