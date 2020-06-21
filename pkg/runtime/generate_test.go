@@ -57,6 +57,10 @@ func TestGenerate(t *testing.T) {
 			inputPath: path.Join(testdataPath, "multiple.yaml"),
 			wantPath:  path.Join(testdataPath, "multiple.ipd"),
 		},
+		"directory": {
+			inputPath: path.Join(testdataPath, "/"),
+			wantPath:  path.Join(testdataPath, "dir.ipd"),
+		},
 	}
 
 	for name, test := range testcases {

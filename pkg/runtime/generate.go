@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -43,10 +44,36 @@ func Generate(path string) error {
 	if err != nil {
 		return err
 	}
-	yamlOrJSONFile, err := ioutil.ReadFile(path)
+	fi, err := os.Stat(path)
 	if err != nil {
 		return err
 	}
+
+	var yamlOrJSONFile []byte
+	if fi.IsDir() {
+		filePaths, err := filepath.Glob(filepath.Join(path, "*"))
+		if err != nil {
+			return err
+		}
+		r := regexp.MustCompile(`.(json|yaml|yml)$`)
+		var files [][]byte
+		for _, path := range filePaths {
+			if r.MatchString(path) {
+				file, err := ioutil.ReadFile(path)
+				if err != nil {
+					return err
+				}
+				files = append(files, file)
+			}
+		}
+		yamlOrJSONFile = bytes.Join(files, []byte(`---`))
+	} else {
+		yamlOrJSONFile, err = ioutil.ReadFile(path)
+		if err != nil {
+			return err
+		}
+	}
+
 	yamlsOrJSONs := bytes.Split(yamlOrJSONFile, []byte(`---`))
 	a := newAddonFile()
 
