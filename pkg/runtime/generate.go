@@ -372,7 +372,7 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 			b.WriteString(protoName)
 			b.WriteString("=")
 
-			if vf.Kind() == reflect.Slice {
+			if vf.Kind() == reflect.Slice && vf.Type() != reflect.TypeOf([]byte(nil)) {
 				b.WriteString("[")
 				for i := 0; i < vf.Len(); i++ {
 					if i != 0 {

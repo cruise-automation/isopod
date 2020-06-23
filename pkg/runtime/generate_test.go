@@ -49,6 +49,10 @@ func TestGenerate(t *testing.T) {
 			inputPath: path.Join(testdataPath, "custom-resource.json"),
 			wantPath:  path.Join(testdataPath, "custom-resource.ipd"),
 		},
+		"resource containing byte array": {
+			inputPath: path.Join(testdataPath, "validating-webhook.yaml"),
+			wantPath:  path.Join(testdataPath, "validating-webhook.ipd"),
+		},
 		"multiple": {
 			inputPath: path.Join(testdataPath, "multiple.yaml"),
 			wantPath:  path.Join(testdataPath, "multiple.ipd"),

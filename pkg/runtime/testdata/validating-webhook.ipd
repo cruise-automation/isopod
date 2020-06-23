@@ -1,0 +1,28 @@
+# vim: set syntax=python:
+
+admissionregistrationv1beta1 = proto.package("k8s.io.api.admissionregistration.v1beta1")
+metav1 = proto.package("k8s.io.apimachinery.pkg.apis.meta.v1")
+
+def install(ctx):
+    kube.put(
+        name="admission-controller",
+        api_group="admissionregistration.k8s.io",
+        data=[admissionregistrationv1beta1.ValidatingWebhookConfiguration(
+            metadata=metav1.ObjectMeta(
+                name="admission-controller",
+            ),
+            Webhooks=[admissionregistrationv1beta1.ValidatingWebhook(
+                name="admission-controller.default.svc.cluster.local",
+                clientConfig=admissionregistrationv1beta1.WebhookClientConfig(
+                    service=admissionregistrationv1beta1.ServiceReference(
+                        namespace="default",
+                        name="admission-controller",
+                    ),
+                    caBundle="LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJtVENDQVFJQ0NRQ2hlR012WDc4SVpEQU5CZ2txaGtpRzl3MEJBUXNGQURBUk1ROHdEUVlEVlFRRERBWnAKYzI5d2IyUXdIaGNOTWpBd05qSXhNRFF3TkRFeldoY05NakV3TmpFeU1EUXdOREV6V2pBUk1ROHdEUVlEVlFRRApEQVpwYzI5d2IyUXdnWjh3RFFZSktvWklodmNOQVFFQkJRQURnWTBBTUlHSkFvR0JBTTdCYmRHeERoNkF3blVVCmoyTmI0WkNYSUJYQXIrMUtBRlFFMTU2aEVCa1lmUHVJTDIrbDBLOGxIUWVvR0lpSEd0SjE4N0FDK20rYVBXL0sKdVFqc1hkVkl4Z0o5em1pTVdKaGFQZUd1M3Fza05QQVErUnAzT1EyNTVHaUIwcEVhUmxLaURGY3VOcGpsckFUZAovR0hERGlodFIrVG0vVkJ1OGM1MGExdnNUVTkvQWdNQkFBRXdEUVlKS29aSWh2Y05BUUVMQlFBRGdZRUFMVkMvClJzVTdDMlh6QjB4VWlxQ1I1SjgwZjhoYXA3dlhpRUcwSFd2T2x3c1Fib3cxVEVOVDJaS3ZEZ3Zub1JGTWFDeVEKRTlJS0hCYjRuSXNhS01OWmRCKy9nMUhCYVcvd3U1UGZZY0hhMmhJWnlhOGNsb0kvcnVGNmYyazhKc2dDVmhCWQpHUFFGU2VTQWlrdWtJWk9jTWlXRXZ6b3hsbmZBbWRrbEZyaXVGYUk9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+                ),
+            )]
+        )]
+    )
+
+def remove(ctx):
+    kube.delete(validatingwebhookconfiguration="admission-controller", api_group="admissionregistration.k8s.io")
