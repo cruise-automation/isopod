@@ -1,0 +1,333 @@
+# vim: set syntax=python:
+
+rbacv1 = proto.package("k8s.io.api.rbac.v1")
+metav1 = proto.package("k8s.io.apimachinery.pkg.apis.meta.v1")
+apiextensionsv1beta1 = proto.package("k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1beta1")
+appsv1 = proto.package("k8s.io.api.apps.v1")
+corev1 = proto.package("k8s.io.api.core.v1")
+utilintstr = proto.package("k8s.io.apimachinery.pkg.util.intstr")
+admissionregistrationv1beta1 = proto.package("k8s.io.api.admissionregistration.v1beta1")
+
+def install(ctx):
+    kube.put(
+        name="test-cluster-view",
+        api_group="rbac.authorization.k8s.io",
+        data=[rbacv1.ClusterRoleBinding(
+            metadata=metav1.ObjectMeta(
+                name="test-cluster-view",
+                labels={
+                    "app": "test-app"
+                },
+            ),
+            subjects=[rbacv1.Subject(
+                kind="ServiceAccount",
+                name="test",
+                namespace="default"
+            ),
+            rbacv1.Subject(
+                kind="ServiceAccount",
+                name="test2",
+                namespace="default"
+            )],
+            roleRef=rbacv1.RoleRef(
+                kind="ClusterRole",
+                name="test-cluster-view"
+            )
+        )]
+    )
+
+    kube.put(
+        name="crontabs.stable.example.com",
+        api_group="apiextensions.k8s.io",
+        data=[apiextensionsv1beta1.CustomResourceDefinition(
+            metadata=metav1.ObjectMeta(
+                name="crontabs.stable.example.com",
+            ),
+            spec=apiextensionsv1beta1.CustomResourceDefinitionSpec(
+                group="stable.example.com",
+                names=apiextensionsv1beta1.CustomResourceDefinitionNames(
+                    plural="crontabs",
+                    singular="crontab",
+                    shortNames=["ct"],
+                    kind="CronTab",
+                ),
+                scope="Namespaced",
+                validation=apiextensionsv1beta1.CustomResourceValidation(
+                    openAPIV3Schema=apiextensionsv1beta1.JSONSchemaProps(
+                        type="object",
+                        properties={
+                            "spec": apiextensionsv1beta1.JSONSchemaProps(
+                                type="object",
+                                properties={
+                                    "cronSpec": apiextensionsv1beta1.JSONSchemaProps(
+                                        type="string",
+                                    ),
+                                    "deepField": apiextensionsv1beta1.JSONSchemaProps(
+                                        type="object",
+                                        properties={
+                                            "attribute1": apiextensionsv1beta1.JSONSchemaProps(
+                                                type="string",
+                                            ),
+                                            "attribute2": apiextensionsv1beta1.JSONSchemaProps(
+                                                type="integer",
+                                            ),
+                                            "attribute3": apiextensionsv1beta1.JSONSchemaProps(
+                                                type="boolean",
+                                            )
+                                        },
+                                    ),
+                                    "image": apiextensionsv1beta1.JSONSchemaProps(
+                                        type="string",
+                                    ),
+                                    "replicas": apiextensionsv1beta1.JSONSchemaProps(
+                                        type="integer",
+                                    )
+                                },
+                            )
+                        },
+                    )
+                ),
+                versions=[apiextensionsv1beta1.CustomResourceDefinitionVersion(
+                    name="v1",
+                    served=True,
+                    storage=True,
+                )],
+            ),
+        )]
+    )
+
+    data=struct(
+        apiVersion="stable.example.com/v1",
+        kind="CronTab",
+        metadata=struct(
+            name="test-custom-resource",
+            namespace="default",
+        ),
+        spec=struct(
+            cronSpec="test-spec",
+            deepField=struct(
+                attribute1="foo",
+                attribute2=2,
+                attribute3=True,
+            ),
+            image="test-image",
+            replicas=1,
+        ),
+    )
+    kube.put_yaml(
+        name="test-custom-resource",
+        namespace="default",
+        data=[data.to_json()]
+    )
+
+    data=struct(
+        apiVersion="stable.example.com/v1",
+        kind="CronTab",
+        metadata=struct(
+            name="test-custom-resource",
+            namespace="default",
+        ),
+        spec=struct(
+            cronSpec="test-spec",
+            deepField=struct(
+                attribute1="foo",
+                attribute2=2,
+                attribute3=True,
+            ),
+            image="test-image",
+            replicas=1,
+        ),
+    )
+    kube.put_yaml(
+        name="test-custom-resource",
+        namespace="default",
+        data=[data.to_json()]
+    )
+
+    kube.put(
+        name="my-nginx",
+        api_group="apps",
+        data=[appsv1.Deployment(
+            metadata=metav1.ObjectMeta(
+                name="my-nginx",
+                namespace="default",
+            ),
+            spec=appsv1.DeploymentSpec(
+                replicas=2,
+                selector=metav1.LabelSelector(
+                    matchLabels={
+                        "app": "my-nginx"
+                    },
+                ),
+                template=corev1.PodTemplateSpec(
+                    metadata=metav1.ObjectMeta(
+                        labels={
+                            "run": "my-nginx"
+                        },
+                    ),
+                    spec=corev1.PodSpec(
+                        containers=[corev1.Container(
+                            name="my-nginx",
+                            image="nginx",
+                            ports=[corev1.ContainerPort(
+                                containerPort=80,
+                            )],
+                            livenessProbe=corev1.Probe(
+                                handler=corev1.Handler(
+                                    httpGet=corev1.HTTPGetAction(
+                                        path="/healthz",
+                                        port=utilintstr.IntOrString(
+                                            intVal=8080,
+                                        ),
+                                        scheme="HTTPS",
+                                    ),
+                                ),
+                            ),
+                        )],
+                    )
+                ),
+            ),
+        )]
+    )
+
+    kube.put(
+        name="crontabs.stable.example.com",
+        api_group="apiextensions.k8s.io",
+        data=[apiextensionsv1beta1.CustomResourceDefinition(
+            metadata=metav1.ObjectMeta(
+                name="crontabs.stable.example.com",
+            ),
+            spec=apiextensionsv1beta1.CustomResourceDefinitionSpec(
+                group="stable.example.com",
+                names=apiextensionsv1beta1.CustomResourceDefinitionNames(
+                    plural="crontabs",
+                    singular="crontab",
+                    shortNames=["ct"],
+                    kind="CronTab",
+                ),
+                scope="Namespaced",
+                validation=apiextensionsv1beta1.CustomResourceValidation(
+                    openAPIV3Schema=apiextensionsv1beta1.JSONSchemaProps(
+                        type="object",
+                        properties={
+                            "spec": apiextensionsv1beta1.JSONSchemaProps(
+                                type="object",
+                                properties={
+                                    "cronSpec": apiextensionsv1beta1.JSONSchemaProps(
+                                        type="string",
+                                    ),
+                                    "deepField": apiextensionsv1beta1.JSONSchemaProps(
+                                        type="object",
+                                        properties={
+                                            "attribute1": apiextensionsv1beta1.JSONSchemaProps(
+                                                type="string",
+                                            ),
+                                            "attribute2": apiextensionsv1beta1.JSONSchemaProps(
+                                                type="integer",
+                                            ),
+                                            "attribute3": apiextensionsv1beta1.JSONSchemaProps(
+                                                type="boolean",
+                                            )
+                                        },
+                                    ),
+                                    "image": apiextensionsv1beta1.JSONSchemaProps(
+                                        type="string",
+                                    ),
+                                    "replicas": apiextensionsv1beta1.JSONSchemaProps(
+                                        type="integer",
+                                    )
+                                },
+                            )
+                        },
+                    )
+                ),
+                versions=[apiextensionsv1beta1.CustomResourceDefinitionVersion(
+                    name="v1",
+                    served=True,
+                    storage=True,
+                )],
+            ),
+        )]
+    )
+
+    data=struct(
+        apiVersion="stable.example.com/v1",
+        kind="CronTab",
+        metadata=struct(
+            name="test-custom-resource",
+            namespace="default",
+        ),
+        spec=struct(
+            cronSpec="test-spec",
+            deepField=struct(
+                attribute1="foo",
+                attribute2=2,
+                attribute3=True,
+            ),
+            image="test-image",
+            replicas=1,
+        ),
+    )
+    kube.put_yaml(
+        name="test-custom-resource",
+        namespace="default",
+        data=[data.to_json()]
+    )
+
+    kube.put(
+        name="test-cluster-view",
+        api_group="rbac.authorization.k8s.io",
+        data=[rbacv1.ClusterRoleBinding(
+            metadata=metav1.ObjectMeta(
+                name="test-cluster-view",
+                labels={
+                    "app": "test-app"
+                },
+            ),
+            subjects=[rbacv1.Subject(
+                kind="ServiceAccount",
+                name="test",
+                namespace="default"
+            ),
+            rbacv1.Subject(
+                kind="ServiceAccount",
+                name="test2",
+                namespace="default"
+            )],
+            roleRef=rbacv1.RoleRef(
+                kind="ClusterRole",
+                name="test-cluster-view"
+            )
+        )]
+    )
+
+    kube.put(
+        name="admission-controller",
+        api_group="admissionregistration.k8s.io",
+        data=[admissionregistrationv1beta1.ValidatingWebhookConfiguration(
+            metadata=metav1.ObjectMeta(
+                name="admission-controller",
+            ),
+            Webhooks=[admissionregistrationv1beta1.ValidatingWebhook(
+                name="admission-controller.default.svc.cluster.local",
+                clientConfig=admissionregistrationv1beta1.WebhookClientConfig(
+                    service=admissionregistrationv1beta1.ServiceReference(
+                        namespace="default",
+                        name="admission-controller",
+                    ),
+                    caBundle="LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJtVENDQVFJQ0NRQ2hlR012WDc4SVpEQU5CZ2txaGtpRzl3MEJBUXNGQURBUk1ROHdEUVlEVlFRRERBWnAKYzI5d2IyUXdIaGNOTWpBd05qSXhNRFF3TkRFeldoY05NakV3TmpFeU1EUXdOREV6V2pBUk1ROHdEUVlEVlFRRApEQVpwYzI5d2IyUXdnWjh3RFFZSktvWklodmNOQVFFQkJRQURnWTBBTUlHSkFvR0JBTTdCYmRHeERoNkF3blVVCmoyTmI0WkNYSUJYQXIrMUtBRlFFMTU2aEVCa1lmUHVJTDIrbDBLOGxIUWVvR0lpSEd0SjE4N0FDK20rYVBXL0sKdVFqc1hkVkl4Z0o5em1pTVdKaGFQZUd1M3Fza05QQVErUnAzT1EyNTVHaUIwcEVhUmxLaURGY3VOcGpsckFUZAovR0hERGlodFIrVG0vVkJ1OGM1MGExdnNUVTkvQWdNQkFBRXdEUVlKS29aSWh2Y05BUUVMQlFBRGdZRUFMVkMvClJzVTdDMlh6QjB4VWlxQ1I1SjgwZjhoYXA3dlhpRUcwSFd2T2x3c1Fib3cxVEVOVDJaS3ZEZ3Zub1JGTWFDeVEKRTlJS0hCYjRuSXNhS01OWmRCKy9nMUhCYVcvd3U1UGZZY0hhMmhJWnlhOGNsb0kvcnVGNmYyazhKc2dDVmhCWQpHUFFGU2VTQWlrdWtJWk9jTWlXRXZ6b3hsbmZBbWRrbEZyaXVGYUk9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+                ),
+            )]
+        )]
+    )
+
+def remove(ctx):
+    kube.delete(clusterrolebinding="test-cluster-view", api_group="rbac.authorization.k8s.io")
+    kube.delete(customresourcedefinition="crontabs.stable.example.com", api_group="apiextensions.k8s.io")
+    kube.delete(crontab="default/test-custom-resource", api_group="stable.example.com")
+    kube.delete(crontab="default/test-custom-resource", api_group="stable.example.com")
+    kube.delete(deployment="default/my-nginx", api_group="apps")
+    kube.delete(customresourcedefinition="crontabs.stable.example.com", api_group="apiextensions.k8s.io")
+    kube.delete(crontab="default/test-custom-resource", api_group="stable.example.com")
+    kube.delete(clusterrolebinding="test-cluster-view", api_group="rbac.authorization.k8s.io")
+    kube.delete(validatingwebhookconfiguration="admission-controller", api_group="admissionregistration.k8s.io")
