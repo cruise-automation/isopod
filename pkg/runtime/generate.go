@@ -397,7 +397,7 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 				}
 			}
 
-			if protoName == "" || protoName == "apiGroup" {
+			if protoName == "" {
 				continue
 			}
 			// add actual object
