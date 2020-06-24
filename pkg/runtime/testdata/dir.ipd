@@ -30,6 +30,7 @@ def install(ctx):
                 namespace="default"
             )],
             roleRef=rbacv1.RoleRef(
+                apiGroup="rbac.authorization.k8s.io",
                 kind="ClusterRole",
                 name="test-cluster-view"
             )
@@ -296,6 +297,7 @@ def install(ctx):
                 namespace="default"
             )],
             roleRef=rbacv1.RoleRef(
+                apiGroup="rbac.authorization.k8s.io",
                 kind="ClusterRole",
                 name="test-cluster-view"
             )
