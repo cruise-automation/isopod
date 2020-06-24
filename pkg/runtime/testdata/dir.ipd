@@ -146,6 +146,7 @@ def install(ctx):
 
     kube.put(
         name="my-nginx",
+        namespace="default",
         api_group="apps",
         data=[appsv1.Deployment(
             metadata=metav1.ObjectMeta(

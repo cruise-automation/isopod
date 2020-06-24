@@ -228,6 +228,12 @@ func (a *addonFile) writeKubePutWithIndent(kubePut *bytes.Buffer, object k8srunt
 	kubePut.Write(indent2)
 	kubePut.WriteString("name=\"" + a.metaData[a.currentIndex].name + "\",\n")
 
+	// namespace
+	if a.metaData[a.currentIndex].namespace != "" {
+		kubePut.Write(indent2)
+		kubePut.WriteString("namespace=\"" + a.metaData[a.currentIndex].namespace + "\",\n")
+	}
+
 	// api_group
 	if group != "" {
 		kubePut.Write(indent2)
