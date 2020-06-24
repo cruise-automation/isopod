@@ -8,6 +8,7 @@ utilintstr = proto.package("k8s.io.apimachinery.pkg.util.intstr")
 def install(ctx):
     kube.put(
         name="my-nginx",
+        namespace="default",
         api_group="apps",
         data=[appsv1.Deployment(
             metadata=metav1.ObjectMeta(
