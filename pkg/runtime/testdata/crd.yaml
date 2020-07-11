@@ -26,6 +26,9 @@ spec:
               properties:
                 attribute1:
                   type: string
+                  enum:
+                    - foo
+                    - bar
                 attribute2:
                   type: integer
                 attribute3:

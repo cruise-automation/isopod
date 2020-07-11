@@ -5,7 +5,6 @@ metav1 = proto.package("k8s.io.apimachinery.pkg.apis.meta.v1")
 apiextensionsv1beta1 = proto.package("k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1beta1")
 appsv1 = proto.package("k8s.io.api.apps.v1")
 corev1 = proto.package("k8s.io.api.core.v1")
-utilintstr = proto.package("k8s.io.apimachinery.pkg.util.intstr")
 admissionregistrationv1beta1 = proto.package("k8s.io.api.admissionregistration.v1beta1")
 
 def install(ctx):
@@ -68,6 +67,12 @@ def install(ctx):
                                         properties={
                                             "attribute1": apiextensionsv1beta1.JSONSchemaProps(
                                                 type="string",
+                                                enum=[apiextensionsv1beta1.JSON(
+                                                    raw="\"foo\""
+                                                ),
+                                                apiextensionsv1beta1.JSON(
+                                                    raw="\"bar\""
+                                                )],
                                             ),
                                             "attribute2": apiextensionsv1beta1.JSONSchemaProps(
                                                 type="integer",
@@ -164,7 +169,7 @@ def install(ctx):
                 template=corev1.PodTemplateSpec(
                     metadata=metav1.ObjectMeta(
                         labels={
-                            "run": "my-nginx"
+                            "app": "my-nginx"
                         },
                     ),
                     spec=corev1.PodSpec(
@@ -172,16 +177,34 @@ def install(ctx):
                             name="my-nginx",
                             image="nginx",
                             ports=[corev1.ContainerPort(
+                                name="my-port",
                                 containerPort=80,
                             )],
+                            resources=corev1.ResourceRequirements(
+                                limits={
+                                    "cpu": kube.resource_quantity("1"),
+                                    "memory": kube.resource_quantity("384Mi")
+                                },
+                                requests={
+                                    "cpu": kube.resource_quantity("200m"),
+                                    "memory": kube.resource_quantity("384Mi")
+                                }
+                            ),
                             livenessProbe=corev1.Probe(
                                 handler=corev1.Handler(
                                     httpGet=corev1.HTTPGetAction(
-                                        path="/healthz",
-                                        port=utilintstr.IntOrString(
-                                            intVal=8080,
-                                        ),
-                                        scheme="HTTPS",
+                                        path="/",
+                                        port=kube.from_int(80),
+                                        scheme="HTTP",
+                                    ),
+                                ),
+                            ),
+                            readinessProbe=corev1.Probe(
+                                handler=corev1.Handler(
+                                    httpGet=corev1.HTTPGetAction(
+                                        path="/",
+                                        port=kube.from_str("my-port"),
+                                        scheme="HTTP",
                                     ),
                                 ),
                             ),
@@ -318,7 +341,7 @@ def install(ctx):
                         namespace="default",
                         name="admission-controller",
                     ),
-                    caBundle="LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJtVENDQVFJQ0NRQ2hlR012WDc4SVpEQU5CZ2txaGtpRzl3MEJBUXNGQURBUk1ROHdEUVlEVlFRRERBWnAKYzI5d2IyUXdIaGNOTWpBd05qSXhNRFF3TkRFeldoY05NakV3TmpFeU1EUXdOREV6V2pBUk1ROHdEUVlEVlFRRApEQVpwYzI5d2IyUXdnWjh3RFFZSktvWklodmNOQVFFQkJRQURnWTBBTUlHSkFvR0JBTTdCYmRHeERoNkF3blVVCmoyTmI0WkNYSUJYQXIrMUtBRlFFMTU2aEVCa1lmUHVJTDIrbDBLOGxIUWVvR0lpSEd0SjE4N0FDK20rYVBXL0sKdVFqc1hkVkl4Z0o5em1pTVdKaGFQZUd1M3Fza05QQVErUnAzT1EyNTVHaUIwcEVhUmxLaURGY3VOcGpsckFUZAovR0hERGlodFIrVG0vVkJ1OGM1MGExdnNUVTkvQWdNQkFBRXdEUVlKS29aSWh2Y05BUUVMQlFBRGdZRUFMVkMvClJzVTdDMlh6QjB4VWlxQ1I1SjgwZjhoYXA3dlhpRUcwSFd2T2x3c1Fib3cxVEVOVDJaS3ZEZ3Zub1JGTWFDeVEKRTlJS0hCYjRuSXNhS01OWmRCKy9nMUhCYVcvd3U1UGZZY0hhMmhJWnlhOGNsb0kvcnVGNmYyazhKc2dDVmhCWQpHUFFGU2VTQWlrdWtJWk9jTWlXRXZ6b3hsbmZBbWRrbEZyaXVGYUk9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+                    caBundle="-----BEGIN CERTIFICATE-----\nMIIBmTCCAQICCQCheGMvX78IZDANBgkqhkiG9w0BAQsFADARMQ8wDQYDVQQDDAZp\nc29wb2QwHhcNMjAwNjIxMDQwNDEzWhcNMjEwNjEyMDQwNDEzWjARMQ8wDQYDVQQD\nDAZpc29wb2QwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAM7BbdGxDh6AwnUU\nj2Nb4ZCXIBXAr+1KAFQE156hEBkYfPuIL2+l0K8lHQeoGIiHGtJ187AC+m+aPW/K\nuQjsXdVIxgJ9zmiMWJhaPeGu3qskNPAQ+Rp3OQ255GiB0pEaRlKiDFcuNpjlrATd\n/GHDDihtR+Tm/VBu8c50a1vsTU9/AgMBAAEwDQYJKoZIhvcNAQELBQADgYEALVC/\nRsU7C2XzB0xUiqCR5J80f8hap7vXiEG0HWvOlwsQbow1TENT2ZKvDgvnoRFMaCyQ\nE9IKHBb4nIsaKMNZdB+/g1HBaW/wu5PfYcHa2hIZya8cloI/ruF6f2k8JsgCVhBY\nGPQFSeSAikukIZOcMiWEvzoxlnfAmdklFriuFaI=\n-----END CERTIFICATE-----\n"
                 ),
             )]
         )]

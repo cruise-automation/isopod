@@ -15,7 +15,7 @@
         "template": {
             "metadata": {
                 "labels": {
-                    "run": "my-nginx"
+                    "app": "my-nginx"
                 }
             },
             "spec": {
@@ -25,14 +25,32 @@
                         "name": "my-nginx",
                         "ports": [
                             {
+                                "name": "my-port",
                                 "containerPort": 80
                             }
                         ],
                         "livenessProbe": {
                             "httpGet": {
-                                "path": "/healthz",
-                                "port": 8080,
-                                "scheme": "HTTPS"
+                                "path": "/",
+                                "port": 80,
+                                "scheme": "HTTP"
+                            }
+                        },
+                        "readinessProbe": {
+                            "httpGet": {
+                                "path": "/",
+                                "port": "my-port",
+                                "scheme": "HTTP"
+                            }
+                        },
+                        "resources": {
+                            "limits": {
+                                "cpu": "1000m",
+                                "memory": "384Mi"
+                            },
+                            "requests": {
+                                "cpu": "200m",
+                                "memory": "384Mi"
                             }
                         }
                     }
