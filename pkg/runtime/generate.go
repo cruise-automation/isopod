@@ -28,10 +28,12 @@ import (
 
 	"github.com/cruise-automation/isopod/pkg/kube"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -331,7 +333,12 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 		v = v.Elem()
 	}
 	if v.Kind() != reflect.Struct && v.Kind() != reflect.Map {
-		j, _ := json.Marshal(v.Interface())
+		i := v.Interface()
+		if v.Type() == reflect.TypeOf([]byte(nil)) {
+			b := v.Interface().([]byte)
+			i = string(b)
+		}
+		j, _ := json.Marshal(i)
 		if bytes.Equal([]byte("true"), j) || bytes.Equal([]byte("false"), j) {
 			// because Python's boolean is capitalized
 			return bytes.Title(j)
@@ -372,6 +379,14 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 	}
 
 	t := v.Type()
+
+	switch specialType := v.Interface().(type) {
+	case resource.Quantity:
+		return a.quantity(specialType)
+	case intstr.IntOrString:
+		return a.intOrString(specialType)
+	}
+
 	name, pkgPath := t.Name(), t.PkgPath()
 	alias := a.addPkg(pkgPath)
 	b.WriteString(alias + "." + name + "(\n")
@@ -467,6 +482,32 @@ func (a *addonFile) genStarlarkStructWithIndent(object interface{}, indent int) 
 		b.WriteString(",\n")
 	}
 	b.Write(indent1)
+	b.WriteString(")")
+	return b.Bytes()
+}
+
+func (a *addonFile) quantity(q resource.Quantity) []byte {
+	b := bytes.NewBuffer([]byte{})
+	b.WriteString("kube.resource_quantity(")
+	j, _ := q.MarshalJSON()
+	b.Write(j)
+	b.WriteString(")")
+	return b.Bytes()
+}
+
+func (a *addonFile) intOrString(intOrString intstr.IntOrString) []byte {
+	b := bytes.NewBuffer([]byte{})
+	b.WriteString("kube.")
+	var vOfIntOrString reflect.Value
+	switch intOrString.Type {
+	case intstr.Int:
+		b.WriteString("from_int(")
+		vOfIntOrString = reflect.ValueOf(intOrString.IntVal)
+	case intstr.String:
+		b.WriteString("from_str(")
+		vOfIntOrString = reflect.ValueOf(intOrString.StrVal)
+	}
+	b.Write(a.genDataWithIndent(vOfIntOrString, 0))
 	b.WriteString(")")
 	return b.Bytes()
 }

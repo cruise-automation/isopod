@@ -35,6 +35,12 @@ def install(ctx):
                                         properties={
                                             "attribute1": apiextensionsv1beta1.JSONSchemaProps(
                                                 type="string",
+                                                enum=[apiextensionsv1beta1.JSON(
+                                                    raw="\"foo\""
+                                                ),
+                                                apiextensionsv1beta1.JSON(
+                                                    raw="\"bar\""
+                                                )],
                                             ),
                                             "attribute2": apiextensionsv1beta1.JSONSchemaProps(
                                                 type="integer",
