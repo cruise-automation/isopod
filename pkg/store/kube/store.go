@@ -20,12 +20,15 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/dustin/go-humanize"
 	log "github.com/golang/glog"
 	"github.com/rs/xid"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/cruise-automation/isopod/pkg/store"
@@ -104,6 +107,10 @@ func (s *Store) PutAddonRun(id store.RolloutID, addon *store.AddonRun) (store.Ru
 		metav1.CreateOptions{},
 	)
 	if err != nil {
+		if apierrors.HasStatusCause(err, metav1.CauseType(field.ErrorTypeTooLong)) {
+			fmt.Printf("Addon not stored in configmap because it is larger than the maximum of 1 MB ( %s )\n", humanize.Bytes(uint64(len(mods))))
+			return "", nil
+		}
 		return "", err
 	}
 

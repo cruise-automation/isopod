@@ -62,6 +62,9 @@ github.com/davecgh/go-spew/spew
 ## explicit
 # github.com/duosecurity/duo_api_golang v0.0.0-20181024123116-92fea9203dbc
 ## explicit
+# github.com/dustin/go-humanize v1.0.0
+## explicit
+github.com/dustin/go-humanize
 # github.com/elazarl/go-bindata-assetfs v1.0.0
 ## explicit
 # github.com/evanphx/json-patch v4.2.0+incompatible
