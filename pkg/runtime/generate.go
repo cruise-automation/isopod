@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -244,8 +245,11 @@ func (a *addonFile) writeKubePutWithIndent(kubePut *bytes.Buffer, object k8srunt
 
 	// data
 	kubePut.Write(indent2)
-	kubePut.WriteString("data=[")
+	kubePut.WriteString("data=[\n")
+	kubePut.Write(bytes.Repeat([]byte(indentString), indent+2))
 	kubePut.Write(data)
+	kubePut.WriteString("\n")
+	kubePut.Write(indent2)
 	kubePut.WriteString("]\n")
 
 	kubePut.Write(indent1)
@@ -321,12 +325,6 @@ func (a *addonFile) genKubeDeleteWithIndent(indent int) []byte {
 }
 
 func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
-	indent1 := bytes.Repeat([]byte(indentString), indent)
-	indentTopLevel := indent1
-	if indent > 0 {
-		indentTopLevel = bytes.Repeat([]byte(indentString), indent-1)
-	}
-
 	b := bytes.NewBuffer([]byte{})
 
 	if v.Kind() == reflect.Ptr {
@@ -348,6 +346,7 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 
 	if v.Kind() == reflect.Map {
 		b.WriteString("{\n")
+		indent++
 
 		// order maps for reproducability
 		var stringKeys []string
@@ -362,18 +361,19 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 
 		for i, key := range stringKeys {
 			keyValue := keyValueMap[key]
-			b.Write(indent1)
+			writeIndent(b, indent)
 			mapKey := a.genDataWithIndent(keyValue, indent+1)
 			b.Write(mapKey)
 			b.WriteString(": ")
-			mapValue := a.genDataWithIndent(v.MapIndex(keyValue), indent+1)
+			mapValue := a.genDataWithIndent(v.MapIndex(keyValue), indent)
 			b.Write(mapValue)
 			if i != v.Len()-1 {
 				b.WriteString(",")
 			}
 			b.WriteString("\n")
 		}
-		b.Write(indentTopLevel)
+		indent--
+		writeIndent(b, indent)
 		b.WriteString("}")
 		return b.Bytes()
 	}
@@ -390,6 +390,7 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 	name, pkgPath := t.Name(), t.PkgPath()
 	alias := a.addPkg(pkgPath)
 	b.WriteString(alias + "." + name + "(\n")
+	indent++
 
 	for i := 0; i < v.NumField(); i++ {
 		vf := v.Field(i)
@@ -416,28 +417,24 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 				continue
 			}
 			// add actual object
-			b.Write(indent1)
+			writeIndent(b, indent)
 			b.WriteString(protoName)
 			b.WriteString("=")
 
 			if vf.Kind() == reflect.Slice && vf.Type() != reflect.TypeOf([]byte(nil)) {
-				b.WriteString("[")
+				b.WriteString("[\n")
+				indent++
 				for i := 0; i < vf.Len(); i++ {
-					if i != 0 {
-						b.Write(indent1)
-						if vf.Index(i).Kind() != reflect.Ptr && vf.Index(i).Kind() != reflect.Struct {
-							b.WriteString(indentString)
-						}
-					}
-					d := a.genDataWithIndent(vf.Index(i), indent+1)
+					writeIndent(b, indent)
+					d := a.genDataWithIndent(vf.Index(i), indent)
 					b.Write(d)
-					if i != vf.Len()-1 {
-						b.WriteString(",\n")
-					}
+					b.WriteString(",\n")
 				}
+				indent--
+				writeIndent(b, indent)
 				b.WriteString("]")
 			} else {
-				d := a.genDataWithIndent(vf, indent+1)
+				d := a.genDataWithIndent(vf, indent)
 				b.Write(d)
 			}
 
@@ -447,7 +444,8 @@ func (a *addonFile) genDataWithIndent(v reflect.Value, indent int) []byte {
 			b.WriteString("\n")
 		}
 	}
-	b.Write(indentTopLevel)
+	indent--
+	writeIndent(b, indent)
 	b.WriteString(")")
 	return b.Bytes()
 }
@@ -510,4 +508,8 @@ func (a *addonFile) intOrString(intOrString intstr.IntOrString) []byte {
 	b.Write(a.genDataWithIndent(vOfIntOrString, 0))
 	b.WriteString(")")
 	return b.Bytes()
+}
+
+func writeIndent(b io.Writer, indent int) {
+	_, _ = b.Write(bytes.Repeat([]byte(indentString), indent))
 }

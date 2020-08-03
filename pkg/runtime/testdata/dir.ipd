@@ -11,95 +11,107 @@ def install(ctx):
     kube.put(
         name="test-cluster-view",
         api_group="rbac.authorization.k8s.io",
-        data=[rbacv1.ClusterRoleBinding(
-            metadata=metav1.ObjectMeta(
-                name="test-cluster-view",
-                labels={
-                    "app": "test-app"
-                },
-            ),
-            subjects=[rbacv1.Subject(
-                kind="ServiceAccount",
-                name="test",
-                namespace="default"
-            ),
-            rbacv1.Subject(
-                kind="ServiceAccount",
-                name="test2",
-                namespace="default"
-            )],
-            roleRef=rbacv1.RoleRef(
-                apiGroup="rbac.authorization.k8s.io",
-                kind="ClusterRole",
-                name="test-cluster-view"
+        data=[
+            rbacv1.ClusterRoleBinding(
+                metadata=metav1.ObjectMeta(
+                    name="test-cluster-view",
+                    labels={
+                        "app": "test-app"
+                    },
+                ),
+                subjects=[
+                    rbacv1.Subject(
+                        kind="ServiceAccount",
+                        name="test",
+                        namespace="default"
+                    ),
+                    rbacv1.Subject(
+                        kind="ServiceAccount",
+                        name="test2",
+                        namespace="default"
+                    ),
+                ],
+                roleRef=rbacv1.RoleRef(
+                    apiGroup="rbac.authorization.k8s.io",
+                    kind="ClusterRole",
+                    name="test-cluster-view"
+                )
             )
-        )]
+        ]
     )
 
     kube.put(
         name="crontabs.stable.example.com",
         api_group="apiextensions.k8s.io",
-        data=[apiextensionsv1beta1.CustomResourceDefinition(
-            metadata=metav1.ObjectMeta(
-                name="crontabs.stable.example.com",
-            ),
-            spec=apiextensionsv1beta1.CustomResourceDefinitionSpec(
-                group="stable.example.com",
-                names=apiextensionsv1beta1.CustomResourceDefinitionNames(
-                    plural="crontabs",
-                    singular="crontab",
-                    shortNames=["ct"],
-                    kind="CronTab",
+        data=[
+            apiextensionsv1beta1.CustomResourceDefinition(
+                metadata=metav1.ObjectMeta(
+                    name="crontabs.stable.example.com",
                 ),
-                scope="Namespaced",
-                validation=apiextensionsv1beta1.CustomResourceValidation(
-                    openAPIV3Schema=apiextensionsv1beta1.JSONSchemaProps(
-                        type="object",
-                        properties={
-                            "spec": apiextensionsv1beta1.JSONSchemaProps(
-                                type="object",
-                                properties={
-                                    "cronSpec": apiextensionsv1beta1.JSONSchemaProps(
-                                        type="string",
-                                    ),
-                                    "deepField": apiextensionsv1beta1.JSONSchemaProps(
-                                        type="object",
-                                        properties={
-                                            "attribute1": apiextensionsv1beta1.JSONSchemaProps(
-                                                type="string",
-                                                enum=[apiextensionsv1beta1.JSON(
-                                                    raw="\"foo\""
+                spec=apiextensionsv1beta1.CustomResourceDefinitionSpec(
+                    group="stable.example.com",
+                    names=apiextensionsv1beta1.CustomResourceDefinitionNames(
+                        plural="crontabs",
+                        singular="crontab",
+                        shortNames=[
+                            "ct",
+                        ],
+                        kind="CronTab",
+                    ),
+                    scope="Namespaced",
+                    validation=apiextensionsv1beta1.CustomResourceValidation(
+                        openAPIV3Schema=apiextensionsv1beta1.JSONSchemaProps(
+                            type="object",
+                            properties={
+                                "spec": apiextensionsv1beta1.JSONSchemaProps(
+                                    type="object",
+                                    properties={
+                                        "cronSpec": apiextensionsv1beta1.JSONSchemaProps(
+                                            type="string",
+                                        ),
+                                        "deepField": apiextensionsv1beta1.JSONSchemaProps(
+                                            type="object",
+                                            properties={
+                                                "attribute1": apiextensionsv1beta1.JSONSchemaProps(
+                                                    type="string",
+                                                    enum=[
+                                                        apiextensionsv1beta1.JSON(
+                                                            raw="\"foo\""
+                                                        ),
+                                                        apiextensionsv1beta1.JSON(
+                                                            raw="\"bar\""
+                                                        ),
+                                                    ],
                                                 ),
-                                                apiextensionsv1beta1.JSON(
-                                                    raw="\"bar\""
-                                                )],
-                                            ),
-                                            "attribute2": apiextensionsv1beta1.JSONSchemaProps(
-                                                type="integer",
-                                            ),
-                                            "attribute3": apiextensionsv1beta1.JSONSchemaProps(
-                                                type="boolean",
-                                            )
-                                        },
-                                    ),
-                                    "image": apiextensionsv1beta1.JSONSchemaProps(
-                                        type="string",
-                                    ),
-                                    "replicas": apiextensionsv1beta1.JSONSchemaProps(
-                                        type="integer",
-                                    )
-                                },
-                            )
-                        },
-                    )
+                                                "attribute2": apiextensionsv1beta1.JSONSchemaProps(
+                                                    type="integer",
+                                                ),
+                                                "attribute3": apiextensionsv1beta1.JSONSchemaProps(
+                                                    type="boolean",
+                                                )
+                                            },
+                                        ),
+                                        "image": apiextensionsv1beta1.JSONSchemaProps(
+                                            type="string",
+                                        ),
+                                        "replicas": apiextensionsv1beta1.JSONSchemaProps(
+                                            type="integer",
+                                        )
+                                    },
+                                )
+                            },
+                        )
+                    ),
+                    versions=[
+                        apiextensionsv1beta1.CustomResourceDefinitionVersion(
+                            name="v1",
+                            served=True,
+                            storage=True,
+                        ),
+                    ],
                 ),
-                versions=[apiextensionsv1beta1.CustomResourceDefinitionVersion(
-                    name="v1",
-                    served=True,
-                    storage=True,
-                )],
-            ),
-        )]
+            )
+        ]
     )
 
     data=struct(
@@ -154,125 +166,137 @@ def install(ctx):
         name="my-nginx",
         namespace="default",
         api_group="apps",
-        data=[appsv1.Deployment(
-            metadata=metav1.ObjectMeta(
-                name="my-nginx",
-                namespace="default",
-            ),
-            spec=appsv1.DeploymentSpec(
-                replicas=2,
-                selector=metav1.LabelSelector(
-                    matchLabels={
-                        "app": "my-nginx"
-                    },
+        data=[
+            appsv1.Deployment(
+                metadata=metav1.ObjectMeta(
+                    name="my-nginx",
+                    namespace="default",
                 ),
-                template=corev1.PodTemplateSpec(
-                    metadata=metav1.ObjectMeta(
-                        labels={
+                spec=appsv1.DeploymentSpec(
+                    replicas=2,
+                    selector=metav1.LabelSelector(
+                        matchLabels={
                             "app": "my-nginx"
                         },
                     ),
-                    spec=corev1.PodSpec(
-                        containers=[corev1.Container(
-                            name="my-nginx",
-                            image="nginx",
-                            ports=[corev1.ContainerPort(
-                                name="my-port",
-                                containerPort=80,
-                            )],
-                            resources=corev1.ResourceRequirements(
-                                limits={
-                                    "cpu": kube.resource_quantity("1"),
-                                    "memory": kube.resource_quantity("384Mi")
-                                },
-                                requests={
-                                    "cpu": kube.resource_quantity("200m"),
-                                    "memory": kube.resource_quantity("384Mi")
-                                }
-                            ),
-                            livenessProbe=corev1.Probe(
-                                handler=corev1.Handler(
-                                    httpGet=corev1.HTTPGetAction(
-                                        path="/",
-                                        port=kube.from_int(80),
-                                        scheme="HTTP",
+                    template=corev1.PodTemplateSpec(
+                        metadata=metav1.ObjectMeta(
+                            labels={
+                                "app": "my-nginx"
+                            },
+                        ),
+                        spec=corev1.PodSpec(
+                            containers=[
+                                corev1.Container(
+                                    name="my-nginx",
+                                    image="nginx",
+                                    ports=[
+                                        corev1.ContainerPort(
+                                            name="my-port",
+                                            containerPort=80,
+                                        ),
+                                    ],
+                                    resources=corev1.ResourceRequirements(
+                                        limits={
+                                            "cpu": kube.resource_quantity("1"),
+                                            "memory": kube.resource_quantity("384Mi")
+                                        },
+                                        requests={
+                                            "cpu": kube.resource_quantity("200m"),
+                                            "memory": kube.resource_quantity("384Mi")
+                                        }
+                                    ),
+                                    livenessProbe=corev1.Probe(
+                                        handler=corev1.Handler(
+                                            httpGet=corev1.HTTPGetAction(
+                                                path="/",
+                                                port=kube.from_int(80),
+                                                scheme="HTTP",
+                                            ),
+                                        ),
+                                    ),
+                                    readinessProbe=corev1.Probe(
+                                        handler=corev1.Handler(
+                                            httpGet=corev1.HTTPGetAction(
+                                                path="/",
+                                                port=kube.from_str("my-port"),
+                                                scheme="HTTP",
+                                            ),
+                                        ),
                                     ),
                                 ),
-                            ),
-                            readinessProbe=corev1.Probe(
-                                handler=corev1.Handler(
-                                    httpGet=corev1.HTTPGetAction(
-                                        path="/",
-                                        port=kube.from_str("my-port"),
-                                        scheme="HTTP",
-                                    ),
-                                ),
-                            ),
-                        )],
-                    )
+                            ],
+                        )
+                    ),
                 ),
-            ),
-        )]
+            )
+        ]
     )
 
     kube.put(
         name="crontabs.stable.example.com",
         api_group="apiextensions.k8s.io",
-        data=[apiextensionsv1beta1.CustomResourceDefinition(
-            metadata=metav1.ObjectMeta(
-                name="crontabs.stable.example.com",
-            ),
-            spec=apiextensionsv1beta1.CustomResourceDefinitionSpec(
-                group="stable.example.com",
-                names=apiextensionsv1beta1.CustomResourceDefinitionNames(
-                    plural="crontabs",
-                    singular="crontab",
-                    shortNames=["ct"],
-                    kind="CronTab",
+        data=[
+            apiextensionsv1beta1.CustomResourceDefinition(
+                metadata=metav1.ObjectMeta(
+                    name="crontabs.stable.example.com",
                 ),
-                scope="Namespaced",
-                validation=apiextensionsv1beta1.CustomResourceValidation(
-                    openAPIV3Schema=apiextensionsv1beta1.JSONSchemaProps(
-                        type="object",
-                        properties={
-                            "spec": apiextensionsv1beta1.JSONSchemaProps(
-                                type="object",
-                                properties={
-                                    "cronSpec": apiextensionsv1beta1.JSONSchemaProps(
-                                        type="string",
-                                    ),
-                                    "deepField": apiextensionsv1beta1.JSONSchemaProps(
-                                        type="object",
-                                        properties={
-                                            "attribute1": apiextensionsv1beta1.JSONSchemaProps(
-                                                type="string",
-                                            ),
-                                            "attribute2": apiextensionsv1beta1.JSONSchemaProps(
-                                                type="integer",
-                                            ),
-                                            "attribute3": apiextensionsv1beta1.JSONSchemaProps(
-                                                type="boolean",
-                                            )
-                                        },
-                                    ),
-                                    "image": apiextensionsv1beta1.JSONSchemaProps(
-                                        type="string",
-                                    ),
-                                    "replicas": apiextensionsv1beta1.JSONSchemaProps(
-                                        type="integer",
-                                    )
-                                },
-                            )
-                        },
-                    )
+                spec=apiextensionsv1beta1.CustomResourceDefinitionSpec(
+                    group="stable.example.com",
+                    names=apiextensionsv1beta1.CustomResourceDefinitionNames(
+                        plural="crontabs",
+                        singular="crontab",
+                        shortNames=[
+                            "ct",
+                        ],
+                        kind="CronTab",
+                    ),
+                    scope="Namespaced",
+                    validation=apiextensionsv1beta1.CustomResourceValidation(
+                        openAPIV3Schema=apiextensionsv1beta1.JSONSchemaProps(
+                            type="object",
+                            properties={
+                                "spec": apiextensionsv1beta1.JSONSchemaProps(
+                                    type="object",
+                                    properties={
+                                        "cronSpec": apiextensionsv1beta1.JSONSchemaProps(
+                                            type="string",
+                                        ),
+                                        "deepField": apiextensionsv1beta1.JSONSchemaProps(
+                                            type="object",
+                                            properties={
+                                                "attribute1": apiextensionsv1beta1.JSONSchemaProps(
+                                                    type="string",
+                                                ),
+                                                "attribute2": apiextensionsv1beta1.JSONSchemaProps(
+                                                    type="integer",
+                                                ),
+                                                "attribute3": apiextensionsv1beta1.JSONSchemaProps(
+                                                    type="boolean",
+                                                )
+                                            },
+                                        ),
+                                        "image": apiextensionsv1beta1.JSONSchemaProps(
+                                            type="string",
+                                        ),
+                                        "replicas": apiextensionsv1beta1.JSONSchemaProps(
+                                            type="integer",
+                                        )
+                                    },
+                                )
+                            },
+                        )
+                    ),
+                    versions=[
+                        apiextensionsv1beta1.CustomResourceDefinitionVersion(
+                            name="v1",
+                            served=True,
+                            storage=True,
+                        ),
+                    ],
                 ),
-                versions=[apiextensionsv1beta1.CustomResourceDefinitionVersion(
-                    name="v1",
-                    served=True,
-                    storage=True,
-                )],
-            ),
-        )]
+            )
+        ]
     )
 
     data=struct(
@@ -302,49 +326,57 @@ def install(ctx):
     kube.put(
         name="test-cluster-view",
         api_group="rbac.authorization.k8s.io",
-        data=[rbacv1.ClusterRoleBinding(
-            metadata=metav1.ObjectMeta(
-                name="test-cluster-view",
-                labels={
-                    "app": "test-app"
-                },
-            ),
-            subjects=[rbacv1.Subject(
-                kind="ServiceAccount",
-                name="test",
-                namespace="default"
-            ),
-            rbacv1.Subject(
-                kind="ServiceAccount",
-                name="test2",
-                namespace="default"
-            )],
-            roleRef=rbacv1.RoleRef(
-                apiGroup="rbac.authorization.k8s.io",
-                kind="ClusterRole",
-                name="test-cluster-view"
+        data=[
+            rbacv1.ClusterRoleBinding(
+                metadata=metav1.ObjectMeta(
+                    name="test-cluster-view",
+                    labels={
+                        "app": "test-app"
+                    },
+                ),
+                subjects=[
+                    rbacv1.Subject(
+                        kind="ServiceAccount",
+                        name="test",
+                        namespace="default"
+                    ),
+                    rbacv1.Subject(
+                        kind="ServiceAccount",
+                        name="test2",
+                        namespace="default"
+                    ),
+                ],
+                roleRef=rbacv1.RoleRef(
+                    apiGroup="rbac.authorization.k8s.io",
+                    kind="ClusterRole",
+                    name="test-cluster-view"
+                )
             )
-        )]
+        ]
     )
 
     kube.put(
         name="admission-controller",
         api_group="admissionregistration.k8s.io",
-        data=[admissionregistrationv1beta1.ValidatingWebhookConfiguration(
-            metadata=metav1.ObjectMeta(
-                name="admission-controller",
-            ),
-            Webhooks=[admissionregistrationv1beta1.ValidatingWebhook(
-                name="admission-controller.default.svc.cluster.local",
-                clientConfig=admissionregistrationv1beta1.WebhookClientConfig(
-                    service=admissionregistrationv1beta1.ServiceReference(
-                        namespace="default",
-                        name="admission-controller",
-                    ),
-                    caBundle="-----BEGIN CERTIFICATE-----\nMIIBmTCCAQICCQCheGMvX78IZDANBgkqhkiG9w0BAQsFADARMQ8wDQYDVQQDDAZp\nc29wb2QwHhcNMjAwNjIxMDQwNDEzWhcNMjEwNjEyMDQwNDEzWjARMQ8wDQYDVQQD\nDAZpc29wb2QwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAM7BbdGxDh6AwnUU\nj2Nb4ZCXIBXAr+1KAFQE156hEBkYfPuIL2+l0K8lHQeoGIiHGtJ187AC+m+aPW/K\nuQjsXdVIxgJ9zmiMWJhaPeGu3qskNPAQ+Rp3OQ255GiB0pEaRlKiDFcuNpjlrATd\n/GHDDihtR+Tm/VBu8c50a1vsTU9/AgMBAAEwDQYJKoZIhvcNAQELBQADgYEALVC/\nRsU7C2XzB0xUiqCR5J80f8hap7vXiEG0HWvOlwsQbow1TENT2ZKvDgvnoRFMaCyQ\nE9IKHBb4nIsaKMNZdB+/g1HBaW/wu5PfYcHa2hIZya8cloI/ruF6f2k8JsgCVhBY\nGPQFSeSAikukIZOcMiWEvzoxlnfAmdklFriuFaI=\n-----END CERTIFICATE-----\n"
+        data=[
+            admissionregistrationv1beta1.ValidatingWebhookConfiguration(
+                metadata=metav1.ObjectMeta(
+                    name="admission-controller",
                 ),
-            )]
-        )]
+                Webhooks=[
+                    admissionregistrationv1beta1.ValidatingWebhook(
+                        name="admission-controller.default.svc.cluster.local",
+                        clientConfig=admissionregistrationv1beta1.WebhookClientConfig(
+                            service=admissionregistrationv1beta1.ServiceReference(
+                                namespace="default",
+                                name="admission-controller",
+                            ),
+                            caBundle="-----BEGIN CERTIFICATE-----\nMIIBmTCCAQICCQCheGMvX78IZDANBgkqhkiG9w0BAQsFADARMQ8wDQYDVQQDDAZp\nc29wb2QwHhcNMjAwNjIxMDQwNDEzWhcNMjEwNjEyMDQwNDEzWjARMQ8wDQYDVQQD\nDAZpc29wb2QwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAM7BbdGxDh6AwnUU\nj2Nb4ZCXIBXAr+1KAFQE156hEBkYfPuIL2+l0K8lHQeoGIiHGtJ187AC+m+aPW/K\nuQjsXdVIxgJ9zmiMWJhaPeGu3qskNPAQ+Rp3OQ255GiB0pEaRlKiDFcuNpjlrATd\n/GHDDihtR+Tm/VBu8c50a1vsTU9/AgMBAAEwDQYJKoZIhvcNAQELBQADgYEALVC/\nRsU7C2XzB0xUiqCR5J80f8hap7vXiEG0HWvOlwsQbow1TENT2ZKvDgvnoRFMaCyQ\nE9IKHBb4nIsaKMNZdB+/g1HBaW/wu5PfYcHa2hIZya8cloI/ruF6f2k8JsgCVhBY\nGPQFSeSAikukIZOcMiWEvzoxlnfAmdklFriuFaI=\n-----END CERTIFICATE-----\n"
+                        ),
+                    ),
+                ]
+            )
+        ]
     )
 
 def remove(ctx):
