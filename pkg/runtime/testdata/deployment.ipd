@@ -9,65 +9,71 @@ def install(ctx):
         name="my-nginx",
         namespace="default",
         api_group="apps",
-        data=[appsv1.Deployment(
-            metadata=metav1.ObjectMeta(
-                name="my-nginx",
-                namespace="default",
-            ),
-            spec=appsv1.DeploymentSpec(
-                replicas=2,
-                selector=metav1.LabelSelector(
-                    matchLabels={
-                        "app": "my-nginx"
-                    },
+        data=[
+            appsv1.Deployment(
+                metadata=metav1.ObjectMeta(
+                    name="my-nginx",
+                    namespace="default",
                 ),
-                template=corev1.PodTemplateSpec(
-                    metadata=metav1.ObjectMeta(
-                        labels={
+                spec=appsv1.DeploymentSpec(
+                    replicas=2,
+                    selector=metav1.LabelSelector(
+                        matchLabels={
                             "app": "my-nginx"
                         },
                     ),
-                    spec=corev1.PodSpec(
-                        containers=[corev1.Container(
-                            name="my-nginx",
-                            image="nginx",
-                            ports=[corev1.ContainerPort(
-                                name="my-port",
-                                containerPort=80,
-                            )],
-                            resources=corev1.ResourceRequirements(
-                                limits={
-                                    "cpu": kube.resource_quantity("1"),
-                                    "memory": kube.resource_quantity("384Mi")
-                                },
-                                requests={
-                                    "cpu": kube.resource_quantity("200m"),
-                                    "memory": kube.resource_quantity("384Mi")
-                                }
-                            ),
-                            livenessProbe=corev1.Probe(
-                                handler=corev1.Handler(
-                                    httpGet=corev1.HTTPGetAction(
-                                        path="/",
-                                        port=kube.from_int(80),
-                                        scheme="HTTP",
+                    template=corev1.PodTemplateSpec(
+                        metadata=metav1.ObjectMeta(
+                            labels={
+                                "app": "my-nginx"
+                            },
+                        ),
+                        spec=corev1.PodSpec(
+                            containers=[
+                                corev1.Container(
+                                    name="my-nginx",
+                                    image="nginx",
+                                    ports=[
+                                        corev1.ContainerPort(
+                                            name="my-port",
+                                            containerPort=80,
+                                        ),
+                                    ],
+                                    resources=corev1.ResourceRequirements(
+                                        limits={
+                                            "cpu": kube.resource_quantity("1"),
+                                            "memory": kube.resource_quantity("384Mi")
+                                        },
+                                        requests={
+                                            "cpu": kube.resource_quantity("200m"),
+                                            "memory": kube.resource_quantity("384Mi")
+                                        }
+                                    ),
+                                    livenessProbe=corev1.Probe(
+                                        handler=corev1.Handler(
+                                            httpGet=corev1.HTTPGetAction(
+                                                path="/",
+                                                port=kube.from_int(80),
+                                                scheme="HTTP",
+                                            ),
+                                        ),
+                                    ),
+                                    readinessProbe=corev1.Probe(
+                                        handler=corev1.Handler(
+                                            httpGet=corev1.HTTPGetAction(
+                                                path="/",
+                                                port=kube.from_str("my-port"),
+                                                scheme="HTTP",
+                                            ),
+                                        ),
                                     ),
                                 ),
-                            ),
-                            readinessProbe=corev1.Probe(
-                                handler=corev1.Handler(
-                                    httpGet=corev1.HTTPGetAction(
-                                        path="/",
-                                        port=kube.from_str("my-port"),
-                                        scheme="HTTP",
-                                    ),
-                                ),
-                            ),
-                        )],
-                    )
+                            ],
+                        )
+                    ),
                 ),
-            ),
-        )]
+            )
+        ]
     )
 
 def remove(ctx):
