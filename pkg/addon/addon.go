@@ -155,6 +155,11 @@ func (a *Addon) GetAddonVersion() string {
 	return a.version
 }
 
+// GetAddonVersion returns the version of the addon if its versioned
+func (a *Addon) GetAddonFilepath() string {
+	return a.filepath
+}
+
 // Match is an optional matching hook. Returns true if addon matched the
 // context and wishes to be installed.
 func (a *Addon) Match(ctx context.Context) (bool, error) {

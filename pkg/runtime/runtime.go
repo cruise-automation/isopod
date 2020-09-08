@@ -86,9 +86,9 @@ type runtime struct {
 	// filename string
 	globals               starlark.StringDict
 	pkgs                  starlark.StringDict // Predeclared packages.
-	version               string              // The addon itself could have a versioned entryFile
 	addonRe               *regexp.Regexp
 	store                 store.Store
+	loader                loader.ModulesLoader
 	noSpin, dryrun, force bool
 }
 
@@ -141,25 +141,16 @@ func New(c *Config, opts ...Option) (Runtime, error) {
 
 func (r *runtime) Load(ctx context.Context) error {
 
-	addonLoader := loader.NewModulesLoaderWithPredeclaredPkgs(filepath.Dir(r.EntryFile), r.pkgs)
+	r.loader = loader.NewModulesLoaderWithPredeclaredPkgs(filepath.Dir(r.EntryFile), r.pkgs)
 
 	thread := &starlark.Thread{
 		Print: printFn,
-		Load:  addonLoader.Load,
+		Load:  r.loader.Load,
 	}
 
 	data, err := ioutil.ReadFile(r.EntryFile)
 	if err != nil {
 		return err
-	}
-
-	if strings.HasPrefix(r.EntryFile, "@") {
-		idx := strings.Index(r.EntryFile, "//")
-		if idx < 0 {
-			return fmt.Errorf("remote addon must contain double slash")
-		}
-		moduleName := r.EntryFile[1:strings.Index(r.EntryFile, "//")]
-		r.version = addonLoader.GetLoadedModuleVersion(moduleName)
 	}
 
 	r.globals, err = starlark.ExecFile(thread, r.EntryFile, data, r.pkgs)
@@ -209,8 +200,15 @@ func (r *runtime) runCommand(ctx context.Context, cmd Command, addons []*addon.A
 
 	case InstallCommand:
 		installAddonFn := func(a *addon.Addon) (err error) {
-			if r.version != "" && a.GetAddonVersion() == "" {
-				a.SetAddonVersion(r.version)
+			addonFilepath := a.GetAddonFilepath()
+			if strings.HasPrefix(addonFilepath, "@") {
+				idx := strings.Index(addonFilepath, "//")
+				if idx < 0 {
+					return fmt.Errorf("remote addon must contain double slash")
+				}
+				addonModuleName := addonFilepath[1:strings.Index(addonFilepath, "//")]
+				a.SetAddonVersion(r.loader.GetLoadedModuleVersion(addonModuleName))
+				fmt.Printf("Addon %s has version %s\n", a.Name, a.GetAddonVersion())
 			}
 			if r.noSpin {
 				return a.Install(ctx)
@@ -298,13 +296,6 @@ func (r *runtime) Run(ctx context.Context, cmd Command, skyCtx starlark.Value) e
 
 		if err := a.Load(ctx); err != nil {
 			return fmt.Errorf("%v load failed: %v", a, err)
-		}
-
-		// Maybe not needed
-		loadedAddonVersions := make(map[string]string)
-		for moduleName, _ := range a.LoadedModules() {
-			version := a.GetModuleVersion(moduleName)
-			loadedAddonVersions[moduleName] = version
 		}
 
 		loaded = append(loaded, a)

@@ -80,6 +80,7 @@ type Module struct {
 type modulesLoader struct {
 	baseDir         string
 	loaded          map[string]*Module
+	loadedVersions  map[string]string
 	predeclaredPkgs starlark.StringDict
 }
 
@@ -97,6 +98,7 @@ func NewModulesLoaderWithPredeclaredPkgs(
 	return &modulesLoader{
 		baseDir:         baseDir,
 		loaded:          map[string]*Module{},
+		loadedVersions:  make(map[string]string),
 		predeclaredPkgs: predeclaredPkgs,
 	}
 }
@@ -152,6 +154,7 @@ func (l *modulesLoader) anchoredLoadFn(
 			baseDir = dep.LocalDir()
 			version = dep.Version()
 			module = module[idx+2:] // suffix after double slash
+			l.loadedVersions[moduleName] = version
 		}
 
 		readerFn := NewFileReaderFactory(baseDir)
@@ -189,8 +192,12 @@ func (l *modulesLoader) GetLoaded() map[string]string {
 	return modules
 }
 
+func (l *modulesLoader) GetAllLoadedModuleVersion() map[string]string {
+	return l.loadedVersions
+}
+
 func (l *modulesLoader) GetLoadedModuleVersion(moduleName string) string {
-	return l.loaded[moduleName].version
+	return l.loadedVersions[moduleName]
 }
 
 // fakeModulesLoader implements ModulesLoader interface.
