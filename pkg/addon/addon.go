@@ -35,6 +35,7 @@ type Addon struct {
 	Name     string
 	filepath string
 	baseDir  string
+	version  string
 	ctx      starlark.StringDict
 
 	// List of globally scopped symbols from main addon file exeution.
@@ -139,6 +140,21 @@ func (a *Addon) LoadedModules() map[string]string {
 	return a.loader.GetLoaded()
 }
 
+// GetModuleVersion returns the version of loaded module
+func (a *Addon) GetModuleVersion(moduleName string) string {
+	return a.loader.GetLoadedModuleVersion(moduleName)
+}
+
+// SetAddonVersion sets the version of the addon if its versioned
+func (a *Addon) SetAddonVersion(version string) {
+	a.version = version
+}
+
+// GetAddonVersion returns the version of the addon if its versioned
+func (a *Addon) GetAddonVersion() string {
+	return a.version
+}
+
 // Match is an optional matching hook. Returns true if addon matched the
 // context and wishes to be installed.
 func (a *Addon) Match(ctx context.Context) (bool, error) {
@@ -174,6 +190,9 @@ func (a *Addon) Install(ctx context.Context) error {
 	thread := &starlark.Thread{
 		Print: a.printFn,
 		Load:  a.loader.Load,
+	}
+	if a.version != "" {
+		sCtx.Attrs["addon_version"] = starlark.String(a.version)
 	}
 
 	thread.SetLocal(GoCtxKey, ctx)

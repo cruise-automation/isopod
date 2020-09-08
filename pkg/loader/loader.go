@@ -48,6 +48,9 @@ type Dependency interface {
 	// Name returns the name of this dependency.
 	Name() string
 
+	// Version returns the version of this dependency.
+	Version() string
+
 	// LocalDir returns the path to the directory storing the source.
 	LocalDir() string
 }
@@ -60,12 +63,16 @@ type ModulesLoader interface {
 
 	// GetLoaded returns a mapping of loaded module paths to their text context.
 	GetLoaded() map[string]string
+
+	// GetLoadedModuleVersion returns the module version given the module name.
+	GetLoadedModuleVersion(moduleName string) string
 }
 
 // Module represents a starlark modules.
 type Module struct {
 	globals starlark.StringDict
 	data    []byte
+	version string
 	err     error
 }
 
@@ -119,6 +126,7 @@ func (l *modulesLoader) anchoredLoadFn(
 		l.loaded[module] = nil
 
 		var predeclared starlark.StringDict
+		var version string
 		switch ext := filepath.Ext(module); ext {
 		case ".ipd", ".star":
 			predeclared = l.predeclaredPkgs
@@ -142,6 +150,7 @@ func (l *modulesLoader) anchoredLoadFn(
 				return nil, fmt.Errorf("failed to fetch module `%s': %v", moduleName, err)
 			}
 			baseDir = dep.LocalDir()
+			version = dep.Version()
 			module = module[idx+2:] // suffix after double slash
 		}
 
@@ -164,7 +173,7 @@ func (l *modulesLoader) anchoredLoadFn(
 		loadFn := l.anchoredLoadFn(newBaseDir, mockReaderFn)
 		thread := &starlark.Thread{Load: loadFn}
 		globals, err := starlark.ExecFile(thread, module, data, predeclared)
-		m = &Module{globals: globals, data: data, err: err}
+		m = &Module{globals: globals, data: data, err: err, version: version}
 
 		// Update the cache.
 		l.loaded[fullModule] = m
@@ -178,6 +187,10 @@ func (l *modulesLoader) GetLoaded() map[string]string {
 		modules[m] = string(v.data)
 	}
 	return modules
+}
+
+func (l *modulesLoader) GetLoadedModuleVersion(moduleName string) string {
+	return l.loaded[moduleName].version
 }
 
 // fakeModulesLoader implements ModulesLoader interface.

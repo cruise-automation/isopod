@@ -194,6 +194,9 @@ func (m *kubePackage) setMetadata(tCtx *addon.SkyCtx, name, namespace string, ob
 	}
 
 	ls["heritage"] = "isopod"
+	if tCtx.Attrs.Has("addon_version") {
+		ls["addon_version"] = tCtx.Attrs["addon_version"].String()
+	}
 	if err := a.SetLabels(obj, ls); err != nil {
 		return err
 	}
