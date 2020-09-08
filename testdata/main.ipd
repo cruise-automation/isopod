@@ -15,7 +15,6 @@
 # limitations under the License.
 
 load("clusters.star", "CLUSTERS")
-load("@isopod//testdata/ingress.ipd", "install")
 
 def clusters(ctx):
     if ctx.cluster != None:
@@ -34,5 +33,4 @@ def addons(ctx):
 
     return [
         addon("test", "addon.ipd", ctx),
-        addon("test_versioned_addon", "@isopod//testdata/ingress.ipd", ctx),
     ]
