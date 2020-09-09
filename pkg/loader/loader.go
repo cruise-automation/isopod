@@ -64,8 +64,8 @@ type ModulesLoader interface {
 	// GetLoaded returns a mapping of loaded module paths to their text context.
 	GetLoaded() map[string]string
 
-	// GetLoadedModuleVersion returns the module version given the module name.
-	GetLoadedModuleVersion(moduleName string) string
+	// GetLoadedModule returns the module given the module name.
+	GetLoadedModule(moduleName string) *Module
 }
 
 // Module represents a starlark modules.
@@ -76,11 +76,15 @@ type Module struct {
 	err     error
 }
 
+// Version returns the version of a loaded module
+func (m *Module) Version() string {
+	return m.version
+}
+
 // ModulesLoader supports loading modules. In Starlark, each file is a module.
 type modulesLoader struct {
 	baseDir         string
 	loaded          map[string]*Module
-	loadedVersions  map[string]string
 	predeclaredPkgs starlark.StringDict
 }
 
@@ -98,7 +102,6 @@ func NewModulesLoaderWithPredeclaredPkgs(
 	return &modulesLoader{
 		baseDir:         baseDir,
 		loaded:          map[string]*Module{},
-		loadedVersions:  make(map[string]string),
 		predeclaredPkgs: predeclaredPkgs,
 	}
 }
@@ -136,7 +139,7 @@ func (l *modulesLoader) anchoredLoadFn(
 			return nil, fmt.Errorf("unknown file extension: %s", ext)
 		}
 
-		fullModule := module
+		moduleNameKey := module
 		if strings.HasPrefix(module, "@") {
 			idx := strings.Index(module, "//")
 			if idx < 0 {
@@ -154,7 +157,7 @@ func (l *modulesLoader) anchoredLoadFn(
 			baseDir = dep.LocalDir()
 			version = dep.Version()
 			module = module[idx+2:] // suffix after double slash
-			l.loadedVersions[moduleName] = version
+			moduleNameKey = moduleName
 		}
 
 		readerFn := NewFileReaderFactory(baseDir)
@@ -179,7 +182,7 @@ func (l *modulesLoader) anchoredLoadFn(
 		m = &Module{globals: globals, data: data, err: err, version: version}
 
 		// Update the cache.
-		l.loaded[fullModule] = m
+		l.loaded[moduleNameKey] = m
 		return m.globals, m.err
 	}
 }
@@ -192,12 +195,8 @@ func (l *modulesLoader) GetLoaded() map[string]string {
 	return modules
 }
 
-func (l *modulesLoader) GetAllLoadedModuleVersion() map[string]string {
-	return l.loadedVersions
-}
-
-func (l *modulesLoader) GetLoadedModuleVersion(moduleName string) string {
-	return l.loadedVersions[moduleName]
+func (l *modulesLoader) GetLoadedModule(moduleName string) *Module {
+	return l.loaded[moduleName]
 }
 
 // fakeModulesLoader implements ModulesLoader interface.

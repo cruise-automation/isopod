@@ -207,7 +207,7 @@ func (r *runtime) runCommand(ctx context.Context, cmd Command, addons []*addon.A
 					return fmt.Errorf("remote addon must contain double slash")
 				}
 				addonModuleName := addonFilepath[1:strings.Index(addonFilepath, "//")]
-				a.SetAddonVersion(r.loader.GetLoadedModuleVersion(addonModuleName))
+				a.SetAddonVersion(r.loader.GetLoadedModule(addonModuleName).Version())
 				fmt.Printf("Addon %s has version %s\n", a.Name, a.GetAddonVersion())
 			}
 			if r.noSpin {

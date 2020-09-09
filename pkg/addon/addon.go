@@ -142,7 +142,7 @@ func (a *Addon) LoadedModules() map[string]string {
 
 // GetModuleVersion returns the version of loaded module
 func (a *Addon) GetModuleVersion(moduleName string) string {
-	return a.loader.GetLoadedModuleVersion(moduleName)
+	return a.loader.GetLoadedModule(moduleName).Version()
 }
 
 // SetAddonVersion sets the version of the addon if its versioned
