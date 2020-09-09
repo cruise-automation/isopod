@@ -297,7 +297,6 @@ func (r *runtime) Run(ctx context.Context, cmd Command, skyCtx starlark.Value) e
 		if err := a.Load(ctx); err != nil {
 			return fmt.Errorf("%v load failed: %v", a, err)
 		}
-
 		loaded = append(loaded, a)
 		loadedNs = append(loadedNs, a.Name)
 	}
