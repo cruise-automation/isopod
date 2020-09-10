@@ -51,10 +51,12 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	schedulingv1beta1 "k8s.io/api/scheduling/v1beta1"
 	storagev1 "k8s.io/api/storage/v1"
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apiregistrationv1b1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 
 	isopod "github.com/cruise-automation/isopod/pkg"
 )
@@ -376,6 +378,18 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 			APIResources: []metav1.APIResource{
 				{Name: "validatingwebhookconfigurations", Kind: "ValidatingWebhookConfiguration"},
 				{Name: "mutatingwebhookconfigurations", Kind: "MutatingWebhookConfiguration"},
+			},
+		},
+		{
+			GroupVersion: schedulingv1beta1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "priorityclass", Kind: "PriorityClass"},
+			},
+		},
+		{
+			GroupVersion: apiregistrationv1b1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "apiservice", Kind: "APIService"},
 			},
 		},
 	}
