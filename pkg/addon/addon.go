@@ -139,6 +139,11 @@ func (a *Addon) LoadedModules() map[string]string {
 	return a.loader.GetLoaded()
 }
 
+// GetModule returns the version of loaded module
+func (a *Addon) GetModule() *loader.Module {
+	return a.loader.GetLoadedModule(a.filepath)
+}
+
 // Match is an optional matching hook. Returns true if addon matched the
 // context and wishes to be installed.
 func (a *Addon) Match(ctx context.Context) (bool, error) {
@@ -174,6 +179,9 @@ func (a *Addon) Install(ctx context.Context) error {
 	thread := &starlark.Thread{
 		Print: a.printFn,
 		Load:  a.loader.Load,
+	}
+	if a.GetModule().Version() != "" {
+		sCtx.Attrs["addon_version"] = starlark.String(a.GetModule().Version())
 	}
 
 	thread.SetLocal(GoCtxKey, ctx)

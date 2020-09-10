@@ -48,6 +48,9 @@ type Dependency interface {
 	// Name returns the name of this dependency.
 	Name() string
 
+	// Version returns the version of this dependency.
+	Version() string
+
 	// LocalDir returns the path to the directory storing the source.
 	LocalDir() string
 }
@@ -60,13 +63,22 @@ type ModulesLoader interface {
 
 	// GetLoaded returns a mapping of loaded module paths to their text context.
 	GetLoaded() map[string]string
+
+	// GetLoadedModule returns the module given the module name.
+	GetLoadedModule(moduleName string) *Module
 }
 
 // Module represents a starlark modules.
 type Module struct {
 	globals starlark.StringDict
 	data    []byte
+	version string
 	err     error
+}
+
+// Version returns the version of a loaded module
+func (m *Module) Version() string {
+	return m.version
 }
 
 // ModulesLoader supports loading modules. In Starlark, each file is a module.
@@ -119,6 +131,7 @@ func (l *modulesLoader) anchoredLoadFn(
 		l.loaded[module] = nil
 
 		var predeclared starlark.StringDict
+		var version string
 		switch ext := filepath.Ext(module); ext {
 		case ".ipd", ".star":
 			predeclared = l.predeclaredPkgs
@@ -126,7 +139,7 @@ func (l *modulesLoader) anchoredLoadFn(
 			return nil, fmt.Errorf("unknown file extension: %s", ext)
 		}
 
-		fullModule := module
+		fileName := module
 		if strings.HasPrefix(module, "@") {
 			idx := strings.Index(module, "//")
 			if idx < 0 {
@@ -142,14 +155,15 @@ func (l *modulesLoader) anchoredLoadFn(
 				return nil, fmt.Errorf("failed to fetch module `%s': %v", moduleName, err)
 			}
 			baseDir = dep.LocalDir()
-			module = module[idx+2:] // suffix after double slash
+			version = dep.Version()
+			fileName = module[idx+2:] // suffix after double slash
 		}
 
 		readerFn := NewFileReaderFactory(baseDir)
 		if mockReaderFn != nil {
 			readerFn = *mockReaderFn
 		}
-		r, closer, err := readerFn(module)
+		r, closer, err := readerFn(fileName)
 		if err != nil {
 			return nil, err
 		}
@@ -164,10 +178,10 @@ func (l *modulesLoader) anchoredLoadFn(
 		loadFn := l.anchoredLoadFn(newBaseDir, mockReaderFn)
 		thread := &starlark.Thread{Load: loadFn}
 		globals, err := starlark.ExecFile(thread, module, data, predeclared)
-		m = &Module{globals: globals, data: data, err: err}
+		m = &Module{globals: globals, data: data, err: err, version: version}
 
 		// Update the cache.
-		l.loaded[fullModule] = m
+		l.loaded[module] = m
 		return m.globals, m.err
 	}
 }
@@ -178,6 +192,10 @@ func (l *modulesLoader) GetLoaded() map[string]string {
 		modules[m] = string(v.data)
 	}
 	return modules
+}
+
+func (l *modulesLoader) GetLoadedModule(moduleName string) *Module {
+	return l.loaded[moduleName]
 }
 
 // fakeModulesLoader implements ModulesLoader interface.

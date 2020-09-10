@@ -78,6 +78,11 @@ func (g *GitRepo) Name() string {
 	return g.name
 }
 
+// Version returns the version of this git repo target.
+func (g *GitRepo) Version() string {
+	return g.commit
+}
+
 // LocalDir returns the path to the directory storing the source.
 func (g *GitRepo) LocalDir() string {
 	return filepath.Join(Workspace, g.name, g.commit)
