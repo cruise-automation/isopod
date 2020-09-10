@@ -174,10 +174,10 @@ func (l *modulesLoader) anchoredLoadFn(
 		}
 
 		// Load and initialize the module in a new thread.
-		newBaseDir := filepath.Join(baseDir, filepath.Dir(module))
+		newBaseDir := filepath.Join(baseDir, filepath.Dir(fileName))
 		loadFn := l.anchoredLoadFn(newBaseDir, mockReaderFn)
 		thread := &starlark.Thread{Load: loadFn}
-		globals, err := starlark.ExecFile(thread, module, data, predeclared)
+		globals, err := starlark.ExecFile(thread, fileName, data, predeclared)
 		m = &Module{globals: globals, data: data, err: err, version: version}
 
 		// Update the cache.
