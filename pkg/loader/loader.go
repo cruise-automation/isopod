@@ -139,7 +139,7 @@ func (l *modulesLoader) anchoredLoadFn(
 			return nil, fmt.Errorf("unknown file extension: %s", ext)
 		}
 
-		moduleNameKey := module
+		fileName := module
 		if strings.HasPrefix(module, "@") {
 			idx := strings.Index(module, "//")
 			if idx < 0 {
@@ -156,15 +156,14 @@ func (l *modulesLoader) anchoredLoadFn(
 			}
 			baseDir = dep.LocalDir()
 			version = dep.Version()
-			module = module[idx+2:] // suffix after double slash
-			moduleNameKey = moduleName
+			fileName = module[idx+2:] // suffix after double slash
 		}
 
 		readerFn := NewFileReaderFactory(baseDir)
 		if mockReaderFn != nil {
 			readerFn = *mockReaderFn
 		}
-		r, closer, err := readerFn(module)
+		r, closer, err := readerFn(fileName)
 		if err != nil {
 			return nil, err
 		}
@@ -182,7 +181,7 @@ func (l *modulesLoader) anchoredLoadFn(
 		m = &Module{globals: globals, data: data, err: err, version: version}
 
 		// Update the cache.
-		l.loaded[moduleNameKey] = m
+		l.loaded[module] = m
 		return m.globals, m.err
 	}
 }

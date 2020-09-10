@@ -140,24 +140,9 @@ func (a *Addon) LoadedModules() map[string]string {
 	return a.loader.GetLoaded()
 }
 
-// GetModuleVersion returns the version of loaded module
-func (a *Addon) GetModuleVersion(moduleName string) string {
-	return a.loader.GetLoadedModule(moduleName).Version()
-}
-
-// SetAddonVersion sets the version of the addon if its versioned
-func (a *Addon) SetAddonVersion(version string) {
-	a.version = version
-}
-
-// GetAddonVersion returns the version of the addon if its versioned
-func (a *Addon) GetAddonVersion() string {
-	return a.version
-}
-
-// GetAddonVersion returns the version of the addon if its versioned
-func (a *Addon) GetAddonFilepath() string {
-	return a.filepath
+// GetModule returns the version of loaded module
+func (a *Addon) GetModule() *loader.Module {
+	return a.loader.GetLoadedModule(a.filepath)
 }
 
 // Match is an optional matching hook. Returns true if addon matched the
@@ -196,8 +181,8 @@ func (a *Addon) Install(ctx context.Context) error {
 		Print: a.printFn,
 		Load:  a.loader.Load,
 	}
-	if a.version != "" {
-		sCtx.Attrs["addon_version"] = starlark.String(a.version)
+	if a.GetModule().Version() != "" {
+		sCtx.Attrs["addon_version"] = starlark.String(a.GetModule().Version())
 	}
 
 	thread.SetLocal(GoCtxKey, ctx)
