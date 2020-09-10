@@ -247,6 +247,32 @@ spec=corev1.PodSpec(
 )
 ```
 
+To import remote addon files, use `addon("addon_name", ""@addon_name//path/to/file", ctx)`,
+for example,
+```python
+isopod.deps:
+
+git_repository(
+    name="versioned_addon",
+    commit="1.0.0",
+    remote="https://github.com/cruise-automation/addon.git",
+)
+...
+
+main.ipd:
+
+def addons(ctx):
+    if ctx.cluster == None:
+        error("`ctx.cluster' not set")
+    if ctx.foobar != None:
+        error("`ctx.foobar' must be `None', got: {foobar}".format(
+            foobar=ctx.foobar))
+
+    return [
+        addon("addon_name", "@addon_name//addon/addon.ipd", ctx),
+    ]
+```
+
 By default Isopod uses `$(pwd)/isopod.deps`, which you can override with `--deps` flag.
 
 # Built-ins
@@ -657,7 +683,7 @@ $ isopod \
 
 # License
 
-Copyright 2019 GM Cruise LLC
+Copyright 2020 Cruise LLC
 
 Licensed under the [Apache License Version 2.0](LICENSE) (the "License");
 you may not use this project except in compliance with the License.
