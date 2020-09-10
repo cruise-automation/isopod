@@ -182,7 +182,7 @@ func (a *Addon) Install(ctx context.Context) error {
 		Load:  a.loader.Load,
 	}
 	if a.GetModule().Version() != "" {
-		sCtx.Attrs["addon_version"] = starlark.String(a.version)
+		sCtx.Attrs["addon_version"] = starlark.String(a.GetModule().Version())
 	}
 
 	thread.SetLocal(GoCtxKey, ctx)
