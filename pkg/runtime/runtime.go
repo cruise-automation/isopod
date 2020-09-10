@@ -88,7 +88,6 @@ type runtime struct {
 	pkgs                  starlark.StringDict // Predeclared packages.
 	addonRe               *regexp.Regexp
 	store                 store.Store
-	loader                loader.ModulesLoader
 	noSpin, dryrun, force bool
 }
 
@@ -140,12 +139,9 @@ func New(c *Config, opts ...Option) (Runtime, error) {
 }
 
 func (r *runtime) Load(ctx context.Context) error {
-
-	r.loader = loader.NewModulesLoaderWithPredeclaredPkgs(filepath.Dir(r.EntryFile), r.pkgs)
-
 	thread := &starlark.Thread{
 		Print: printFn,
-		Load:  r.loader.Load,
+		Load:  loader.NewModulesLoaderWithPredeclaredPkgs(filepath.Dir(r.EntryFile), r.pkgs).Load,
 	}
 
 	data, err := ioutil.ReadFile(r.EntryFile)
