@@ -35,7 +35,6 @@ type Addon struct {
 	Name     string
 	filepath string
 	baseDir  string
-	version  string
 	ctx      starlark.StringDict
 
 	// List of globally scopped symbols from main addon file exeution.
