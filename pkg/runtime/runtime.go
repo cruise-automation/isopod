@@ -200,16 +200,6 @@ func (r *runtime) runCommand(ctx context.Context, cmd Command, addons []*addon.A
 
 	case InstallCommand:
 		installAddonFn := func(a *addon.Addon) (err error) {
-			addonFilepath := a.GetAddonFilepath()
-			if strings.HasPrefix(addonFilepath, "@") {
-				idx := strings.Index(addonFilepath, "//")
-				if idx < 0 {
-					return fmt.Errorf("remote addon must contain double slash")
-				}
-				addonModuleName := addonFilepath[1:strings.Index(addonFilepath, "//")]
-				a.SetAddonVersion(a.GetModuleVersion(addonModuleName))
-				fmt.Printf("Addon %s has version %s\n", a.Name, a.GetAddonVersion())
-			}
 			if r.noSpin {
 				return a.Install(ctx)
 			}
