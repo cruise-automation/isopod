@@ -45,6 +45,7 @@ import (
 	authenticationv1 "k8s.io/api/authentication/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	batchv1b1 "k8s.io/api/batch/v1beta1"
 	csr "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -350,6 +351,12 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 			APIResources: []metav1.APIResource{
 				{Name: "cronjobs", Namespaced: true, Kind: "CronJob"},
 				{Name: "jobs", Namespaced: true, Kind: "Job"},
+			},
+		},
+		{
+			GroupVersion: batchv1b1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "cronjobs", Namespaced: true, Kind: "CronJob"},
 			},
 		},
 		{
