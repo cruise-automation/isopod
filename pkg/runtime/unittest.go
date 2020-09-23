@@ -146,7 +146,7 @@ type result struct {
 
 // exec executes all test cases within a file referenced by path.
 func exec(ctx context.Context, path string) (*result, error) {
-	v, vClose, err := vault.NewFake(false)
+	v, vClose, err := vault.NewFake()
 	if err != nil {
 		return nil, err
 	}

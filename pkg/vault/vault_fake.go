@@ -19,6 +19,8 @@ import (
 	"encoding/json"
 	"fmt"
 	isopod "github.com/cruise-automation/isopod/pkg"
+	"github.com/cruise-automation/isopod/pkg/addon"
+	"github.com/cruise-automation/isopod/pkg/util"
 	vaultapi "github.com/hashicorp/vault/api"
 	"go.starlark.net/starlark"
 	"io/ioutil"
@@ -31,9 +33,8 @@ import (
 
 type fakeVault struct {
 	*isopod.Module
-	realClient         *vaultapi.Client
-	realClientFallBack bool
-	m                  map[string]string
+	realClient *vaultapi.Client
+	m          map[string]string
 }
 
 // vaultFakeReadFn is a starlark built-in function that returns a fakeVaules Starlark dict.
@@ -71,6 +72,80 @@ func (fvlt *fakeVault) vaultFakeReadFn(t *starlark.Thread, b *starlark.Builtin, 
 	return nil, fmt.Errorf("<%v>: request failed: %v", b.Name(), "requested secret was not found in this path")
 }
 
+// vaultFakeReadRawFn is starlark built-in function that reads a raw JSON value
+//// from vault endpoint.
+//// Returns a (potentially nested) dict of raw JSON data read by the specified
+//// Vault endpoint path.
+//// Usage:
+////   values = vault.read_raw(path)
+////   print(values['foo'])
+func (fvlt *fakeVault) vaultFakeReadRawFn(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	return fvlt.vaultFakeReadFn(t, b, args, kwargs)
+}
+
+// vaultFakeWriteFn is a starlark built-in function that writes to Vault.
+//// Usage:
+////   # kwargs keyword names are used as data keys, values are stored as repr
+////   # of a kwarg value.
+////   vault.write(path, key1=value1, key2=value2)
+////   data = vault.read(path)
+////   print(data['key1']) == repr(value1) # Must be True
+func (fvlt *fakeVault) vaultFakeWriteFn(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	if err := fvlt.assertToken(); err != nil {
+		return nil, err
+	}
+	var path string
+	if err := starlark.UnpackPositionalArgs(b.Name(), args, nil, 1, &path); err != nil {
+		return nil, fmt.Errorf("<%v>: failed to parse args: %v", b.Name(), err)
+	}
+
+	data := make(map[string]interface{}, len(kwargs))
+	for _, kv := range kwargs {
+		switch value := kv[1].(type) {
+		case starlark.String:
+			data[string(kv[0].(starlark.String))] = string(value)
+		case *starlark.List:
+			list := make([]string, value.Len())
+			for i := 0; i < value.Len(); i++ {
+				ss, ok := value.Index(i).(starlark.String)
+				if !ok {
+					return nil, fmt.Errorf("<%v>: list value not a string: %v", b.Name(), value)
+				}
+				list[i] = string(ss)
+			}
+			data[string(kv[0].(starlark.String))] = list
+		default:
+			return nil, fmt.Errorf("<%v>: value not a string or list: %v", b.Name(), kv[1])
+		}
+	}
+
+	r := fvlt.realClient.NewRequest("PUT", "/v1/"+path)
+	if err := r.SetJSONBody(data); err != nil {
+		return nil, fmt.Errorf("failed to set request body to %+v: %v", data, err)
+	}
+
+	ctx := t.Local(addon.GoCtxKey).(context.Context)
+	resp, err := fvlt.realClient.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("<%v>: request failed: %v", b.Name(), err)
+	}
+	if err := resp.Error(); err != nil {
+		return nil, fmt.Errorf("<%v>: request failed: %v", b.Name(), err)
+	}
+
+	d := json.NewDecoder(resp.Body)
+	respData := map[string]interface{}{}
+	if err := d.Decode(&respData); err != nil {
+		return starlark.None, nil
+	}
+
+	v, err := util.ValueFromNestedMap(respData)
+	if err != nil {
+		return starlark.None, nil
+	}
+	return v, nil
+}
+
 // assertToken ensures that vault is only accessed if a token is set
 func (fvlt *fakeVault) assertToken() (err error) {
 	if fvlt.realClient.Token() == "" {
@@ -83,7 +158,7 @@ func (fvlt *fakeVault) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		v, ok := fvlt.m[r.URL.Path]
-		if !ok && fvlt.realClientFallBack {
+		if !ok {
 			// Fall back to real Vault client if fake key does not exist.
 			ctx := context.Background()
 			r := fvlt.realClient.NewRequest("GET", r.URL.Path)
@@ -150,39 +225,47 @@ func NewFakeModule(fakeVault *fakeVault) (m starlark.HasAttrs, err error) {
 	fakeVault.Module = &isopod.Module{
 		Name: "vault",
 		Attrs: starlark.StringDict{
-			"read": starlark.NewBuiltin("vault.read", fakeVault.vaultFakeReadFn),
+			"read":     starlark.NewBuiltin("vault.read", fakeVault.vaultFakeReadFn),
+			"read_raw": starlark.NewBuiltin("vault.read_raw", fakeVault.vaultFakeReadRawFn),
+			"write":    starlark.NewBuiltin("vault.write", fakeVault.vaultFakeWriteFn),
+			"exist":    starlark.NewBuiltin("vault.exist", fakeVault.vaultFakeExistFn),
 		},
 	}
 	return fakeVault.Module, nil
 }
 
 // NewFake returns a new fake vault module for testing.
-func NewFake(realClientFallBack bool) (m starlark.HasAttrs, closeFn func(), err error) {
+func NewFake() (m starlark.HasAttrs, closeFn func(), err error) {
 	// Create a real Vault client for read fall back if key does not exist.
 	vaultC, err := vaultapi.NewClient(&vaultapi.Config{
 		Address: os.Getenv("VAULT_ADDR"),
 	})
 	vaultC.SetToken(os.Getenv("VAULT_TOKEN"))
 
-	fakeVaultObj := &fakeVault{m: make(map[string]string), realClient: vaultC, realClientFallBack: realClientFallBack}
-
+	fakeVaultObj := &fakeVault{m: make(map[string]string), realClient: vaultC}
 	s := httptest.NewTLSServer(fakeVaultObj)
 
 	if err != nil {
 		return nil, s.Close, fmt.Errorf("failed to initialize Vault client: %v", err)
 	}
 
-	c, err := vaultapi.NewClient(&vaultapi.Config{
-		Address:    s.URL,
-		HttpClient: s.Client(),
-	})
-	if err != nil {
-		return nil, s.Close, err
+	module, _ := NewFakeModule(fakeVaultObj)
+	return module, s.Close, nil
+}
+
+// New returns a new skaylark.HasAttrs object for vault package.
+func New(c *vault.Client) *isopod.Module {
+	v := &vaultPackage{
+		client: c,
 	}
-	c.SetToken("fake_token")
-	if !realClientFallBack {
-		module, _ := NewFakeModule(fakeVaultObj)
-		return module, s.Close, nil
+	v.Module = &isopod.Module{
+		Name: "vault",
+		Attrs: starlark.StringDict{
+			"read":     starlark.NewBuiltin("vault.read", v.vaultReadFn),
+			"read_raw": starlark.NewBuiltin("vault.read_raw", v.vaultReadRawFn),
+			"write":    starlark.NewBuiltin("vault.write", v.vaultWriteFn),
+			"exist":    starlark.NewBuiltin("vault.exist", v.vaultExistFn),
+		},
 	}
-	return New(c), s.Close, nil
+	return v.Module
 }

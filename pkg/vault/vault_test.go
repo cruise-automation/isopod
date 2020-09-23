@@ -24,7 +24,7 @@ import (
 )
 
 func TestVault(t *testing.T) {
-	tv, closeFn, err := NewFake(false)
+	tv, closeFn, err := NewFake()
 	defer closeFn()
 	if err != nil {
 		t.Fatal(err)

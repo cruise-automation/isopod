@@ -75,7 +75,7 @@ func WithVault(c *vapi.Client) Option {
 		opts.pkgs["vault"] = vault.New(c)
 		if opts.dryRun {
 			// TODO use var from cmd entrypoint
-			opts.pkgs["vault"], _, _ = vault.NewFake(false)
+			opts.pkgs["vault"], _, _ = vault.NewFake()
 		}
 		return nil
 	})
