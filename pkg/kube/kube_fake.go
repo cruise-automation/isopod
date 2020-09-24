@@ -349,7 +349,6 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 		{
 			GroupVersion: batchv1.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
-				{Name: "cronjobs", Namespaced: true, Kind: "CronJob"},
 				{Name: "jobs", Namespaced: true, Kind: "Job"},
 			},
 		},
