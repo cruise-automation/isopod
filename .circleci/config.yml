@@ -57,14 +57,9 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Setup Vault
-          command: |
-            VAULT_CLIENT_TOKEN=`curl localhost:8201/.vault-token`
-            curl --fail -v -X POST -H "X-Vault-Token:$VAULT_CLIENT_TOKEN" -d '{"type":"transit"}' localhost:8200/v1/sys/mounts/transit
-      - run:
           name: Run Tests
           command: |
-            export VAULT_TOKEN=`curl localhost:8201/.vault-token`
+            export VAULT_TOKEN=`curl localhost:8201/client-token`
             make test-vault
 
   testdata:
