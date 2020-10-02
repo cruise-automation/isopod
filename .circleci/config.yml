@@ -47,7 +47,7 @@ jobs:
 
   vault-integration-test:
     machine:
-      resource_class: large
+      resource_class: medium
     steps:
       - checkout
       - run:
