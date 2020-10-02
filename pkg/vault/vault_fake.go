@@ -260,8 +260,8 @@ func NewFakeModule(fakeVault *fakeVault) (m starlark.HasAttrs, err error) {
 	return fakeVault.Module, nil
 }
 
-// NewFake returns a new fake vault module for testing.
-func NewFake() (m starlark.HasAttrs, closeFn func(), err error) {
+// NewDryRunFake returns a new fake vault module for dry run.
+func NewDryRunFake() (m starlark.HasAttrs, closeFn func(), err error) {
 	// Create a real Vault client for read fall back if key does not exist.
 	vaultC, err := vaultapi.NewClient(&vaultapi.Config{
 		Address: os.Getenv("VAULT_ADDR"),
@@ -272,12 +272,35 @@ func NewFake() (m starlark.HasAttrs, closeFn func(), err error) {
 
 	vaultC.SetToken(os.Getenv("VAULT_TOKEN"))
 	fakeVaultObj := &fakeVault{m: make(map[string]string), realClient: vaultC}
-	s := httptest.NewTLSServer(fakeVaultObj)
-
 	module, err := NewFakeModule(fakeVaultObj)
 	if err != nil {
-		return nil, s.Close, fmt.Errorf("failed to initialize Fake vault module: %v", err)
+		return nil, func() {}, fmt.Errorf("failed to initialize Fake vault module: %v", err)
 	}
 
-	return module, s.Close, nil
+	return module, func() {}, nil
+}
+
+// NewFake returns a new fake vault module for testing.
+func NewFake() (m starlark.HasAttrs, closeFn func(), err error) {
+	// Create a real Vault client for read fall back if key does not exist.
+	vaultC, err := vaultapi.NewClient(&vaultapi.Config{
+		Address: os.Getenv("VAULT_ADDR"),
+	})
+	vaultC.SetToken(os.Getenv("VAULT_TOKEN"))
+
+	s := httptest.NewTLSServer(&fakeVault{m: make(map[string]string), realClient: vaultC})
+
+	if err != nil {
+		return nil, s.Close, fmt.Errorf("failed to initialize Vault client: %v", err)
+	}
+
+	c, err := vaultapi.NewClient(&vaultapi.Config{
+		Address:    s.URL,
+		HttpClient: s.Client(),
+	})
+	if err != nil {
+		return nil, s.Close, err
+	}
+	c.SetToken("fake_token")
+	return New(c), s.Close, nil
 }

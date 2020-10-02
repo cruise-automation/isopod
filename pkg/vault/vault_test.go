@@ -15,6 +15,7 @@
 package vault
 
 import (
+	"os"
 	"testing"
 
 	vaultapi "github.com/hashicorp/vault/api"
@@ -66,6 +67,46 @@ func TestVault(t *testing.T) {
 			desc:       "Read data from `foo/bar2'",
 			expr:       "vault.read('foo/bar2')",
 			wantResult: `map["a":["1", "2"] "b":"2"]`,
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			pkgs := starlark.StringDict{"vault": tv}
+			v, _, err := util.Eval(t.Name(), tc.expr, nil, pkgs)
+
+			gotErr := ""
+			if err != nil {
+				gotErr = err.Error()
+			}
+			if tc.wantErr != gotErr {
+				t.Fatalf("Unexpected error.\nWant: %s\nGot: %s", tc.wantErr, gotErr)
+			}
+
+			if tc.wantResult != v.String() {
+				t.Fatalf("Unexpected expression result.\nWant: %s\nGot: %s", tc.wantResult, v.String())
+			}
+
+		})
+	}
+}
+
+func TestDryRunVault(t *testing.T) {
+	_ = os.Setenv("VAULT_TOKEN", "fake_token")
+	tv, _, err := NewDryRunFake()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		desc string
+		expr string
+
+		wantResult string
+		wantErr    string
+	}{
+		{
+			desc:       "Write value to `foo/bar'",
+			expr:       "vault.write('foo/bar', a='1', b='2')",
+			wantResult: `map["a":"1" "b":"2"]`,
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
