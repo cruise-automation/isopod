@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	isopod "github.com/cruise-automation/isopod/pkg"
-	"github.com/cruise-automation/isopod/pkg/addon"
 	"github.com/cruise-automation/isopod/pkg/util"
 	vaultapi "github.com/hashicorp/vault/api"
 	"go.starlark.net/starlark"
@@ -103,7 +102,16 @@ func (fvlt *fakeVault) vaultFakeWriteFn(t *starlark.Thread, b *starlark.Builtin,
 	for _, kv := range kwargs {
 		switch value := kv[1].(type) {
 		case starlark.String:
-			data[string(kv[0].(starlark.String))] = string(value)
+			dataKey := string(kv[0].(starlark.String))
+			data[dataKey] = string(value)
+			if dataKey == "format" && string(value) == "pem" {
+				data["data"] = map[string]interface{}{
+					"certificate": "fake",
+					"issuing_ca":  "fake",
+					"csr":         "fake",
+					"private_key": "fake",
+				}
+			}
 		case *starlark.List:
 			list := make([]string, value.Len())
 			for i := 0; i < value.Len(); i++ {
@@ -119,31 +127,49 @@ func (fvlt *fakeVault) vaultFakeWriteFn(t *starlark.Thread, b *starlark.Builtin,
 		}
 	}
 
-	r := fvlt.realClient.NewRequest("PUT", "/v1/"+path)
-	if err := r.SetJSONBody(data); err != nil {
-		return nil, fmt.Errorf("failed to set request body to %+v: %v", data, err)
-	}
-
-	ctx := t.Local(addon.GoCtxKey).(context.Context)
-	resp, err := fvlt.realClient.RawRequestWithContext(ctx, r)
+	v, err := util.ValueFromNestedMap(data)
 	if err != nil {
-		return nil, fmt.Errorf("<%v>: request failed: %v", b.Name(), err)
-	}
-	if err := resp.Error(); err != nil {
-		return nil, fmt.Errorf("<%v>: request failed: %v", b.Name(), err)
-	}
-
-	d := json.NewDecoder(resp.Body)
-	respData := map[string]interface{}{}
-	if err := d.Decode(&respData); err != nil {
-		return starlark.None, nil
-	}
-
-	v, err := util.ValueFromNestedMap(respData)
-	if err != nil {
-		return starlark.None, nil
+		return starlark.None, err
 	}
 	return v, nil
+}
+
+// vaultFakeExistFn is a starlark built-in function that checks if a secret path exists on vault.
+//
+// Checking the vault response status seems to be the most resilient implementation. The alternative
+// would be to list all secrets under filepath.Dir(path) to match filepath.Base(path), but then
+// filepath.Dir(path) itself could be nonexistent, causing isopod to exit.
+//
+// Usage:
+//   ok = vault.exist(path)
+//	 if ok:
+//	 	print(path + " exists on vault.")
+func (fvlt *fakeVault) vaultFakeExistFn(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	if err := fvlt.assertToken(); err != nil {
+		return nil, err
+	}
+	var path string
+	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 1, &path); err != nil {
+		return nil, fmt.Errorf("<%v>: failed to parse args: %v", b.Name(), err)
+	}
+
+	secretName := filepath.Base("/" + path)
+	parent := strings.Replace(path, "/"+secretName, "", -1)
+	secretsListResp, err := fvlt.realClient.Logical().List(parent)
+	if err != nil {
+		return nil, fmt.Errorf("<%v>: request failed: %v", b.Name(), err)
+	}
+	secretsListObj, ok := secretsListResp.Data["keys"]
+	if !ok {
+		return nil, fmt.Errorf("<%v>: request failed: %v", b.Name(), "no keys found under this path")
+	}
+	secrets := secretsListObj.([]interface{})
+	for _, v := range secrets {
+		if secretName == v.(string) {
+			return starlark.True, nil
+		}
+	}
+	return starlark.False, nil
 }
 
 // assertToken ensures that vault is only accessed if a token is set
@@ -240,32 +266,18 @@ func NewFake() (m starlark.HasAttrs, closeFn func(), err error) {
 	vaultC, err := vaultapi.NewClient(&vaultapi.Config{
 		Address: os.Getenv("VAULT_ADDR"),
 	})
-	vaultC.SetToken(os.Getenv("VAULT_TOKEN"))
+	if err != nil {
+		return nil, func() {}, fmt.Errorf("failed to initialize Vault client: %v", err)
+	}
 
+	vaultC.SetToken(os.Getenv("VAULT_TOKEN"))
 	fakeVaultObj := &fakeVault{m: make(map[string]string), realClient: vaultC}
 	s := httptest.NewTLSServer(fakeVaultObj)
 
+	module, err := NewFakeModule(fakeVaultObj)
 	if err != nil {
-		return nil, s.Close, fmt.Errorf("failed to initialize Vault client: %v", err)
+		return nil, s.Close, fmt.Errorf("failed to initialize Fake vault module: %v", err)
 	}
 
-	module, _ := NewFakeModule(fakeVaultObj)
 	return module, s.Close, nil
-}
-
-// New returns a new skaylark.HasAttrs object for vault package.
-func New(c *vault.Client) *isopod.Module {
-	v := &vaultPackage{
-		client: c,
-	}
-	v.Module = &isopod.Module{
-		Name: "vault",
-		Attrs: starlark.StringDict{
-			"read":     starlark.NewBuiltin("vault.read", v.vaultReadFn),
-			"read_raw": starlark.NewBuiltin("vault.read_raw", v.vaultReadRawFn),
-			"write":    starlark.NewBuiltin("vault.write", v.vaultWriteFn),
-			"exist":    starlark.NewBuiltin("vault.exist", v.vaultExistFn),
-		},
-	}
-	return v.Module
 }
