@@ -49,6 +49,7 @@ jobs:
   vault-integration-test:
     <<: *integration-test-image
     steps:
+      - checkout
       - run:
           name: "Integration test for Vault plugin"
           command: |

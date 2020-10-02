@@ -1,9 +1,9 @@
 KIND_VERSION = v0.8.1
 KIND_CLUSTER_NAME = vault-integration-test
 GOPATH = $(shell if [ -x "$$(command -v go)" ]; then go env GOPATH | cut -d: -f1; fi)
-TESTFLAGS = "-mod=vendor -timeout=20m -v -race -cpu=4"
+TESTFLAGS = -mod=vendor -timeout=20m -v -race -cpu=4
 PKGS = $(shell if [ -x "$$(command -v go)" ]; then go list ./... | grep -ivE '(pkg/vault)'; fi)
-ARGS = "-args -v=1 -logtostderr"
+ARGS = -args -v=1 -logtostderr
 export KIND_KUBECONFIG = /tmp/kind-kubeconfig
 
 default: kind-test-cluster
