@@ -127,6 +127,7 @@ func TestDryRunVault(t *testing.T) {
 
 		})
 	}
+	_ = os.Setenv("VAULT_TOKEN", "")
 }
 
 func TestVaultPackage_AssertToken(t *testing.T) {
