@@ -18,16 +18,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	isopod "github.com/cruise-automation/isopod/pkg"
-	"github.com/cruise-automation/isopod/pkg/util"
-	vaultapi "github.com/hashicorp/vault/api"
-	"go.starlark.net/starlark"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+
+	isopod "github.com/cruise-automation/isopod/pkg"
+	"github.com/cruise-automation/isopod/pkg/util"
+
+	vaultapi "github.com/hashicorp/vault/api"
+	"go.starlark.net/starlark"
 )
 
 type fakeVault struct {
@@ -53,7 +55,7 @@ func (fvlt *fakeVault) vaultFakeReadFn(t *starlark.Thread, b *starlark.Builtin, 
 	}
 
 	secretName := filepath.Base("/" + path)
-	parent := strings.Replace(path, "/"+secretName, "", -1)
+	parent := strings.ReplaceAll(path, "/"+secretName, "")
 	secretsListResp, err := fvlt.realClient.Logical().List(parent)
 	if err != nil {
 		return nil, fmt.Errorf("<%v>: request failed: %v", b.Name(), err)
@@ -72,23 +74,23 @@ func (fvlt *fakeVault) vaultFakeReadFn(t *starlark.Thread, b *starlark.Builtin, 
 }
 
 // vaultFakeReadRawFn is starlark built-in function that reads a raw JSON value
-//// from vault endpoint.
-//// Returns a (potentially nested) dict of raw JSON data read by the specified
-//// Vault endpoint path.
-//// Usage:
-////   values = vault.read_raw(path)
-////   print(values['foo'])
+// from vault endpoint.
+// Returns a (potentially nested) dict of raw JSON data read by the specified
+// Vault endpoint path.
+// Usage:
+//   values = vault.read_raw(path)
+//   print(values['foo'])
 func (fvlt *fakeVault) vaultFakeReadRawFn(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	return fvlt.vaultFakeReadFn(t, b, args, kwargs)
 }
 
 // vaultFakeWriteFn is a starlark built-in function that writes to Vault.
-//// Usage:
-////   # kwargs keyword names are used as data keys, values are stored as repr
-////   # of a kwarg value.
-////   vault.write(path, key1=value1, key2=value2)
-////   data = vault.read(path)
-////   print(data['key1']) == repr(value1) # Must be True
+// Usage:
+//   # kwargs keyword names are used as data keys, values are stored as repr
+//   # of a kwarg value.
+//   vault.write(path, key1=value1, key2=value2)
+//   data = vault.read(path)
+//   print(data['key1']) == repr(value1) # Must be True
 func (fvlt *fakeVault) vaultFakeWriteFn(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	if err := fvlt.assertToken(); err != nil {
 		return nil, err
@@ -154,7 +156,7 @@ func (fvlt *fakeVault) vaultFakeExistFn(t *starlark.Thread, b *starlark.Builtin,
 	}
 
 	secretName := filepath.Base("/" + path)
-	parent := strings.Replace(path, "/"+secretName, "", -1)
+	parent := strings.ReplaceAll(path, "/"+secretName, "")
 	secretsListResp, err := fvlt.realClient.Logical().List(parent)
 	if err != nil {
 		return nil, fmt.Errorf("<%v>: request failed: %v", b.Name(), err)

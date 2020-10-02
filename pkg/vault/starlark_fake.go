@@ -1,15 +1,14 @@
 package vault
 
 import (
-	"fmt"
 	"go.starlark.net/starlark"
+
+	"fmt"
 )
 
 // fakeValues implements starlark.Mapping and starlark which provides dict-like fake interface.
 // Is meant to be used to simulate a fakeVault read which returns a fake value for any key
-type fakeValues struct {
-	v map[starlark.String]starlark.Value
-}
+type fakeValues struct{}
 
 // String implements starlark.Value.String.
 // Produces stable output.
