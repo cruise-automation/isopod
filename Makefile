@@ -6,16 +6,7 @@ PKGS = $(shell if [ -x "$$(command -v go)" ]; then go list ./pkg/... | grep -ivE
 ARGS = -args -v=1 -logtostderr
 export KIND_KUBECONFIG = /tmp/kind-kubeconfig
 
-default: kind-test-cluster
-
 kind-test-cluster:
-	sudo apt -y update
-	sudo apt -y install snapd
-	sudo snap install --classic --channel=1.14/stable go
-	export PATH=/snap/bin:$(PATH)
-	GO111MODULE="on" go get sigs.k8s.io/kind@$(KIND_VERSION)
-	$(GOPATH)/bin/kind create cluster --config kind.yaml --name $(KIND_CLUSTER_NAME) --wait 1m
-	$(GOPATH)/bin/kind get kubeconfig --name $(KIND_CLUSTER_NAME) > $(KIND_KUBECONFIG)
 
 test-ci:
 	@CGO_ENABLED=1 go test $(TESTFLAGS) -cover -covermode=atomic $(PKGS) $(ARGS)

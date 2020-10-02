@@ -46,16 +46,19 @@ jobs:
       - run: make test-ci
 
   vault-integration-test:
-    machine:
-      resource_class: medium
+    <<: *golang-docker-base-image
+      - image: mannimal/vault-cci:latest
     steps:
       - checkout
       - run:
-          name: "Integration test for Vault plugin"
+          name: Setup Vault
           command: |
-            make kind-test-cluster
-            testdata/scripts/verify_kind_cluster.sh
-            testdata/scripts/install_test_vault.sh
+            VAULT_CLIENT_TOKEN=`curl localhost:8201/.vault-token`
+            curl --fail -v -X POST -H "X-Vault-Token:$VAULT_CLIENT_TOKEN" -d '{"type":"transit"}' localhost:8200/v1/sys/mounts/transit
+      - run:
+          name: Run Tests
+          command: |
+            export VAULT_TOKEN=`curl localhost:8201/.vault-token`
             make test-vault
 
   testdata:
