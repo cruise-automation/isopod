@@ -60,7 +60,6 @@ var (
 )
 
 func init() {
-	flag.Parse()
 	stdlog.SetFlags(stdlog.Lshortfile)
 	// If depsFile unset, and if $(pwd)/isopod.deps exists, update depsFile.
 	if *depsFile == "" {
@@ -199,6 +198,7 @@ func (w *verboseGlogWriter) Write(p []byte) (n int, err error) {
 }
 
 func main() {
+	flag.Parse()
 	ctx := context.Background()
 
 	// Redirects all output to standrad Go log to Google's log at verbose level 1.

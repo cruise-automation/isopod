@@ -46,7 +46,8 @@ jobs:
       - run: make test-ci
 
   vault-integration-test:
-    <<: *integration-test-image
+    machine:
+      resource_class: large
     steps:
       - checkout
       - run:
