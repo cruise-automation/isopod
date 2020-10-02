@@ -249,6 +249,7 @@ func (fvlt *fakeVault) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// NewFakeModule constructs and returns a new vault module that doesn't actually read values in vault.
 func NewFakeModule(fakeVault *fakeVault) (m starlark.HasAttrs, err error) {
 	fakeVault.Module = &isopod.Module{
 		Name: "vault",
