@@ -11,6 +11,10 @@ linter-image: &linter-image
   docker:
     - image: golangci/golangci-lint:v1.23.8
 
+integration-test-image: &integration-test-image
+  docker:
+    - image: cimg/base:2020.01
+
 jobs:
   build:
     <<: *golang-docker-base-image
@@ -40,7 +44,18 @@ jobs:
     steps:
       - checkout
       # CGO_ENABLED=1 for race detection.
-      - run: CGO_ENABLED=1 go test -mod=vendor -timeout=20m -v -race -cpu=4 -cover -covermode=atomic ./... -args -v=1 -logtostderr
+      - run: make test-ci
+
+  vault-integration-test:
+    <<: *integration-test-image
+    steps:
+      - run:
+          name: "Integration test for Vault plugin"
+          command: |
+            make kind-test-cluster
+            testdata/scripts/verify_kind_cluster.sh
+            testdata/scripts/install_test_vault.sh
+            make test-vault
 
   testdata:
     <<: *golang-docker-base-image
@@ -73,6 +88,7 @@ workflows:
     jobs:
       - build
       - unittest
+      - vault-integration-test
       - lint
       - testdata:
           requires:

@@ -15,7 +15,6 @@
 package vault
 
 import (
-	"os"
 	"testing"
 
 	vaultapi "github.com/hashicorp/vault/api"
@@ -90,7 +89,6 @@ func TestVault(t *testing.T) {
 }
 
 func TestDryRunVault(t *testing.T) {
-	_ = os.Setenv("VAULT_TOKEN", "fake_token")
 	tv, _, err := NewDryRunFake()
 	if err != nil {
 		t.Fatal(err)
@@ -107,6 +105,16 @@ func TestDryRunVault(t *testing.T) {
 			desc:       "Write value to `foo/bar'",
 			expr:       "vault.write('foo/bar', a='1', b='2')",
 			wantResult: `map["a":"1" "b":"2"]`,
+		},
+		{
+			desc:       "`foo/bar' Exists",
+			expr:       "vault.exist('foo/test-secret')",
+			wantResult: "True",
+		},
+		{
+			desc:       "Read data from `foo/bar'",
+			expr:       "vault.read('foo/test-secret')",
+			wantResult: `map["value":"new-test"]`,
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -127,7 +135,6 @@ func TestDryRunVault(t *testing.T) {
 
 		})
 	}
-	_ = os.Setenv("VAULT_TOKEN", "")
 }
 
 func TestVaultPackage_AssertToken(t *testing.T) {
