@@ -43,7 +43,6 @@ jobs:
     <<: *golang-docker-base-image
     steps:
       - checkout
-      # CGO_ENABLED=1 for race detection.
       - run: make test-ci
 
   vault-integration-test:

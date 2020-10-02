@@ -9,6 +9,8 @@ export KIND_KUBECONFIG = /tmp/kind-kubeconfig
 default: kind-test-cluster
 
 $(GOPATH)/bin/kind:
+	sudo apt update
+	sudo apt install snapd
 	sudo snap install --classic --channel=1.14/stable go
 	export PATH=/snap/bin:$PATH
 	GO111MODULE="on" go get sigs.k8s.io/kind@$(KIND_VERSION)
@@ -20,10 +22,10 @@ kind-test-cluster: $(GOPATH)/bin/kind
 	$(GOPATH)/bin/kind get kubeconfig --name $(KIND_CLUSTER_NAME) > $(KIND_KUBECONFIG)
 
 test-ci:
-	@go test $(TESTFLAGS) -cover -covermode=atomic -coverpkg="$(shell echo "$(PKGS)" | sed 's/ /,/g')" $(PKGS) $(ARGS)
+	@CGO_ENABLED=1 go test $(TESTFLAGS) -cover -covermode=atomic -coverpkg="$(shell echo "$(PKGS)" | sed 's/ /,/g')" $(PKGS) $(ARGS)
 
 test-vault:
-	@go test $(TESTFLAGS) -cover -covermode=atomic ./pkg/vault $(ARGS)
+	@CGO_ENABLED=1 go test $(TESTFLAGS) -cover -covermode=atomic ./pkg/vault $(ARGS)
 
 clean:
 	@if [ -x "$$(command -v $(GOPATH)/bin/kind)" ]; then $(GOPATH)/bin/kind delete cluster --name $(KIND_CLUSTER_NAME) > /dev/null 2>&1 ; fi
