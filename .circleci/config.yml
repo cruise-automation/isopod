@@ -59,6 +59,7 @@ jobs:
       - run:
           name: Run Tests
           command: |
+            export VAULT_ADDR='http://127.0.0.1:8200'
             export VAULT_TOKEN=`curl localhost:8201/client-token`
             make test-vault
 
