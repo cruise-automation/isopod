@@ -104,17 +104,17 @@ func TestDryRunVault(t *testing.T) {
 	}{
 		{
 			desc:       "Write value to `foo/bar'",
-			expr:       "vault.write('foo/bar', a='1', b='2')",
+			expr:       "vault.write('secret/foo/bar', a='1', b='2')",
 			wantResult: `map["a":"1" "b":"2"]`,
 		},
 		{
 			desc:       "`foo/bar' Exists",
-			expr:       "vault.exist('foo/test-secret')",
+			expr:       "vault.exist('secret/foo/test-secret')",
 			wantResult: "True",
 		},
 		{
 			desc:       "Read data from `foo/bar'",
-			expr:       "vault.read('foo/test-secret')",
+			expr:       "vault.read('secret/foo/test-secret')",
 			wantResult: `map["value":"fake"]`,
 		},
 	} {

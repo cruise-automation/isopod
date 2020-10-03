@@ -61,8 +61,8 @@ jobs:
           command: |
             export VAULT_ADDR='http://127.0.0.1:8200'
             export VAULT_TOKEN=`curl localhost:8201/client-token`
-            curl --fail -v -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"value":"bar"}' localhost:8200/v1/foo/test-secret
-            curl --fail -v -X GET -H "X-Vault-Token:$VAULT_TOKEN" localhost:8200/v1/foo/test-secret
+            curl -H "X-Vault-Token:$VAULT_TOKEN" -H "Content-Type: application/json" -X POST -d '{"value":"bar"}' http://127.0.0.1:8200/v1/secret/foo/test-secret
+            curl -H "X-Vault-Token:$VAULT_TOKEN" -X GET http://127.0.0.1:8200/v1/secret/foo/test-secret
             make test-vault
 
   testdata:
