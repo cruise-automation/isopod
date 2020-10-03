@@ -13,7 +13,7 @@ type fakeValues struct{}
 // String implements starlark.Value.String.
 // Produces stable output.
 func (fv *fakeValues) String() string {
-	out := "map[value:fake]"
+	out := `map["value":"fake"]`
 	return out
 }
 
