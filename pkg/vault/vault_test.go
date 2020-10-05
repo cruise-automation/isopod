@@ -15,6 +15,7 @@
 package vault
 
 import (
+	"os"
 	"testing"
 
 	vaultapi "github.com/hashicorp/vault/api"
@@ -88,7 +89,57 @@ func TestVault(t *testing.T) {
 	}
 }
 
+func TestDryRunVault(t *testing.T) {
+	tv, _, err := NewDryRunFake()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		desc string
+		expr string
+
+		wantResult string
+		wantErr    string
+	}{
+		{
+			desc:       "Write value to `foo/bar'",
+			expr:       "vault.write('secret/foo/bar', a='1', b='2')",
+			wantResult: `map["a":"1" "b":"2"]`,
+		},
+		{
+			desc:       "`foo/bar' Exists",
+			expr:       "vault.exist('secret/foo/test-secret')",
+			wantResult: "True",
+		},
+		{
+			desc:       "Read data from `foo/bar'",
+			expr:       "vault.read('secret/foo/test-secret')",
+			wantResult: `map["value":"fake"]`,
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			pkgs := starlark.StringDict{"vault": tv}
+			v, _, err := util.Eval(t.Name(), tc.expr, nil, pkgs)
+
+			gotErr := ""
+			if err != nil {
+				gotErr = err.Error()
+			}
+			if tc.wantErr != gotErr {
+				t.Fatalf("Unexpected error.\nWant: %s\nGot: %s", tc.wantErr, gotErr)
+			}
+
+			if tc.wantResult != v.String() {
+				t.Fatalf("Unexpected expression result.\nWant: %s\nGot: %s", tc.wantResult, v.String())
+			}
+
+		})
+	}
+}
+
 func TestVaultPackage_AssertToken(t *testing.T) {
+	_ = os.Setenv("VAULT_TOKEN", "")
 	c, _ := vaultapi.NewClient(nil)
 	v := &vaultPackage{
 		client: c,

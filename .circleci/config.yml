@@ -39,8 +39,29 @@ jobs:
     <<: *golang-docker-base-image
     steps:
       - checkout
-      # CGO_ENABLED=1 for race detection.
-      - run: CGO_ENABLED=1 go test -mod=vendor -timeout=20m -v -race -cpu=4 -cover -covermode=atomic ./... -args -v=1 -logtostderr
+      - run: make test-ci
+
+  vault-integration-test:
+    docker:
+      - image: cimg/go:1.14
+        environment:
+          GO111MODULE: "on"
+          CGO_ENABLED: 0
+      - image: mannimal/vault-cci
+        environment:
+          SKIP_SETCAP: skip
+    steps:
+      - checkout
+      - run:
+          name: Run Tests
+          command: |
+            export VAULT_ADDR='http://127.0.0.1:8200'
+            # Wait for the vault container to create a token
+            sleep 15
+            export VAULT_TOKEN=`curl localhost:8201/client-token`
+            curl -H "X-Vault-Token:$VAULT_TOKEN" -H "Content-Type: application/json" -X POST -d '{"value":"bar"}' http://127.0.0.1:8200/v1/secret/foo/test-secret
+            curl -H "X-Vault-Token:$VAULT_TOKEN" -X GET http://127.0.0.1:8200/v1/secret/foo/test-secret
+            make test-vault
 
   testdata:
     <<: *golang-docker-base-image
@@ -73,6 +94,7 @@ workflows:
     jobs:
       - build
       - unittest
+      - vault-integration-test
       - lint
       - testdata:
           requires:

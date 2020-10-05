@@ -74,7 +74,7 @@ func WithVault(c *vapi.Client) Option {
 	return fnOption(func(opts *options) error {
 		opts.pkgs["vault"] = vault.New(c)
 		if opts.dryRun {
-			opts.pkgs["vault"], _, _ = vault.NewFake()
+			opts.pkgs["vault"], _, _ = vault.NewDryRunFake()
 		}
 		return nil
 	})
