@@ -11,10 +11,6 @@ linter-image: &linter-image
   docker:
     - image: golangci/golangci-lint:v1.23.8
 
-integration-test-image: &integration-test-image
-  docker:
-    - image: cimg/base:2020.01
-
 jobs:
   build:
     <<: *golang-docker-base-image
