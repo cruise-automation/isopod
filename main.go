@@ -214,7 +214,6 @@ func main() {
 
 		if _, err = os.Stat(defaultDepsFilePath); os.IsNotExist(err) {
 			log.Info("Using no remote modules")
-			return
 		}
 		*depsFile = defaultDepsFilePath
 	}
