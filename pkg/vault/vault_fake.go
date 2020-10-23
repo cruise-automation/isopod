@@ -54,6 +54,14 @@ func (fvlt *fakeVault) vaultFakeReadFn(t *starlark.Thread, b *starlark.Builtin, 
 		return nil, fmt.Errorf("<%v>: failed to parse args: %v", b.Name(), err)
 	}
 
+	if strings.HasPrefix(path, "sys") || strings.HasPrefix(path, "auth") {
+		_, err := fvlt.realClient.Logical().Read(path)
+		if err != nil {
+			return nil, fmt.Errorf("<%v>: request failed: %v", b.Name(), err)
+		}
+		return &fakeValues{}, nil
+	}
+
 	secretName := filepath.Base("/" + path)
 	parent := strings.ReplaceAll(path, "/"+secretName, "")
 	secretsListResp, err := fvlt.realClient.Logical().List(parent)
@@ -153,6 +161,14 @@ func (fvlt *fakeVault) vaultFakeExistFn(t *starlark.Thread, b *starlark.Builtin,
 	var path string
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 1, &path); err != nil {
 		return nil, fmt.Errorf("<%v>: failed to parse args: %v", b.Name(), err)
+	}
+
+	if strings.HasPrefix(path, "sys") || strings.HasPrefix(path, "auth") {
+		_, err := fvlt.realClient.Logical().Read(path)
+		if err != nil {
+			return nil, fmt.Errorf("<%v>: request failed: %v", b.Name(), err)
+		}
+		return starlark.True, nil
 	}
 
 	secretName := filepath.Base("/" + path)
