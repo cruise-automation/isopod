@@ -61,20 +61,6 @@ var (
 
 func init() {
 	stdlog.SetFlags(stdlog.Lshortfile)
-	// If depsFile unset, and if $(pwd)/isopod.deps exists, update depsFile.
-	if *depsFile == "" {
-		workingDir, err := os.Getwd()
-		if err != nil {
-			log.Fatalf("Failed to get working dir: %v", err)
-		}
-		defaultDepsFilePath := filepath.Join(workingDir, dep.DepsFile)
-
-		if _, err = os.Stat(defaultDepsFilePath); os.IsNotExist(err) {
-			log.Info("Using no remote modules")
-			return
-		}
-		*depsFile = defaultDepsFilePath
-	}
 }
 
 func usageAndDie() {
@@ -218,6 +204,19 @@ func main() {
 		if err := dep.Load(*depsFile); err != nil {
 			log.Exitf("Failed to load deps file `%s': %v", *depsFile, err)
 		}
+	} else {
+		// If depsFile unset, and if $(pwd)/isopod.deps exists, update depsFile.
+		workingDir, err := os.Getwd()
+		if err != nil {
+			log.Fatalf("Failed to get working dir: %v", err)
+		}
+		defaultDepsFilePath := filepath.Join(workingDir, dep.DepsFile)
+
+		if _, err = os.Stat(defaultDepsFilePath); os.IsNotExist(err) {
+			log.Info("Using no remote modules")
+			return
+		}
+		*depsFile = defaultDepsFilePath
 	}
 
 	if cmd == runtime.TestCommand {
