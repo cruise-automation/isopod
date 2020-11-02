@@ -27,6 +27,7 @@ import (
 	"go.starlark.net/starlark"
 
 	"github.com/cruise-automation/isopod/pkg/loader"
+	"github.com/cruise-automation/isopod/pkg/util"
 )
 
 // Addon implements single addons lifecycle hooks.
@@ -199,7 +200,7 @@ func (a *Addon) Install(ctx context.Context) error {
 
 	args := starlark.Tuple([]starlark.Value{sCtx})
 	_, err := starlark.Call(thread, fn, args, nil)
-	return err
+	return util.HumanReadableEvalError(err)
 }
 
 // Remove is called to remove the addon.
@@ -226,7 +227,7 @@ func (a *Addon) Remove(ctx context.Context) error {
 
 	args := starlark.Tuple([]starlark.Value{sCtx})
 	_, err := starlark.Call(thread, fn, args, nil)
-	return err
+	return util.HumanReadableEvalError(err)
 }
 
 // ErrorFn implements built-in for interrupting addon execution flow on error

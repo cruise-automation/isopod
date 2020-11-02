@@ -85,6 +85,7 @@ require (
 	github.com/ory/dockertest v3.3.2+incompatible // indirect
 	github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
+	github.com/pkg/errors v0.8.1
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/rs/xid v1.2.1
 	github.com/ryanuber/go-glob v0.0.0-20170128012129-256dc444b735 // indirect

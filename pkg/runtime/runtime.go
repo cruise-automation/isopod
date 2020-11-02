@@ -35,6 +35,7 @@ import (
 	"github.com/cruise-automation/isopod/pkg/loader"
 	"github.com/cruise-automation/isopod/pkg/modules"
 	"github.com/cruise-automation/isopod/pkg/store"
+	"github.com/cruise-automation/isopod/pkg/util"
 )
 
 const (
@@ -317,7 +318,8 @@ func (r *runtime) callStarlarkFunc(ctx context.Context, fnName string, args star
 	}
 	thread.SetLocal("context", ctx)
 
-	return starlark.Call(thread, entryFn, args, nil)
+	ret, err := starlark.Call(thread, entryFn, args, nil)
+	return ret, util.HumanReadableEvalError(err)
 }
 
 func goMapToSkyCtx(m map[string]string) *addon.SkyCtx {
