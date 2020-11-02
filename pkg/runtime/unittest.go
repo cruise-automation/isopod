@@ -17,7 +17,6 @@ package runtime
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -26,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stripe/skycfg"
 	"go.starlark.net/starlark"
 
@@ -36,6 +36,7 @@ import (
 	"github.com/cruise-automation/isopod/pkg/kube"
 	"github.com/cruise-automation/isopod/pkg/loader"
 	"github.com/cruise-automation/isopod/pkg/modules"
+	"github.com/cruise-automation/isopod/pkg/util"
 	"github.com/cruise-automation/isopod/pkg/vault"
 )
 
@@ -232,8 +233,7 @@ func exec(ctx context.Context, path string) (*result, error) {
 					Runtime:    time.Since(startT),
 				}, nil
 			}
-
-			return nil, err
+			return nil, util.HumanReadableEvalError(err)
 		}
 	}
 
