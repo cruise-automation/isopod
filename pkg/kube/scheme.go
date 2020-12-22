@@ -53,6 +53,7 @@ import (
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	istiosecurityv1beta1 "istio.io/client-go/pkg/apis/security/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -68,6 +69,7 @@ var (
 	Codecs             = serializer.NewCodecFactory(Scheme)
 	localSchemeBuilder = runtime.SchemeBuilder{
 		apiextensionsv1beta1.AddToScheme,
+		apiextensionsv1.AddToScheme,
 		admissionregistrationv1beta1.AddToScheme,
 		appsv1.AddToScheme,
 		appsv1beta1.AddToScheme,
