@@ -65,7 +65,15 @@ func newResource(
 		return nil, err
 	}
 
-	partial := schema.GroupVersionResource{Group: apiGroup, Resource: resource}
+	// Guess version from apiGroup. Version is optionally passed in as postfix of apiGroup after a `/`.
+	version := ""
+	apiGroupSplitted := strings.Split(apiGroup, "/")
+	if len(apiGroupSplitted) > 1 {
+		version = apiGroupSplitted[len(apiGroupSplitted)-1]
+		apiGroup = strings.Join(apiGroupSplitted[:len(apiGroupSplitted)-1], "/")
+	}
+
+	partial := schema.GroupVersionResource{Group: apiGroup, Resource: resource, Version: version}
 	rMapper := restmapper.NewDiscoveryRESTMapper(gr)
 
 	gvk, err := rMapper.KindFor(partial)
