@@ -310,10 +310,13 @@ kube.put(
 Supported args:
   + `name` - Name (`.metadata.name`) of the resource
   + `namespace` (Optional) - Namespace (`.metadata.namespace`) of the resource
-  + `api_group` (Optional) - API group (without version) of the resource. If
-     not provided, Isopod runtime will attempt to deduce the resource from
+  + `api_group` (Optional) - API group of the resource. If not provided,
+     Isopod runtime will attempt to deduce the resource from
      just Proto type name which is unreliable. It is recommended to set this
-     for all objects outside of `core` group.
+     for all objects outside of `core` group. Optionally, version can also be
+     specified after a `/`, example:
+     + `apiextensions.k8s.io` - specify the group only, version is implied from Proto or from runtime.
+     + `apiextensions.k8s.io/v1` - specify both group and version.
   + `subresource` (Optional) - A subresource specifier (e.g `/status`).
   + `data` - A list of Protobuf definitions of objects to be created.
 
@@ -328,8 +331,8 @@ Deletes object in Kubernetes.
 # non-namespaced resources).
 kube.delete(deployment="default/nginx")
 # api_group can optionally be provided to remove ambuguity (if multiple
-# resources by the same name exist in different API Groups).
-kube.delete(clusterrole="nginx", api_group = "rbac.authorization.k8s.io")
+# resources by the same name exist in different API Groups or different versions).
+kube.delete(clusterrole="nginx", api_group = "rbac.authorization.k8s.io/v1")
 ```
 
 ---
