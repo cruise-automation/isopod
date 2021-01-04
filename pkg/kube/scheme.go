@@ -46,6 +46,7 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	storagev1alpha1 "k8s.io/api/storage/v1alpha1"
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
+	vpav1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	vpav1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 
 	rbacsyncv1alpha "github.com/cruise-automation/rbacsync/pkg/apis/rbacsync/v1alpha"
@@ -104,6 +105,7 @@ var (
 		storagev1.AddToScheme,
 		storagev1alpha1.AddToScheme,
 		vpav1beta2.AddToScheme,
+		vpav1.AddToScheme,
 		apiregistrationv1beta1.AddToScheme,
 		istionetworkingv1alpha3.AddToScheme,
 		istionetworkingv1beta1.AddToScheme,
