@@ -337,6 +337,7 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 			GroupVersion: autoscalingv1.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "horizontalpodautoscalers", Kind: "HorizontalPodAutoscaler"},
+				{Name: "verticalpodautoscalers", Kind: "VerticalPodAutoscaler"},
 			},
 		},
 		{
