@@ -25,25 +25,6 @@ import (
 	"github.com/cruise-automation/isopod/pkg/store"
 )
 
-// storeStub implements Store interface for no-op store.
-type storeStub struct{}
-
-func (storeStub) CreateRollout() (*store.Rollout, error) { return &store.Rollout{}, nil }
-
-func (storeStub) PutAddonRun(id store.RolloutID, _ *store.AddonRun) (store.RunID, error) {
-	return "", nil
-}
-
-func (storeStub) CompleteRollout(id store.RolloutID) error { return nil }
-
-func (storeStub) GetLive() (*store.Rollout, bool, error) {
-	return nil, false, nil
-}
-
-func (storeStub) GetRollout(id store.RolloutID) (r *store.Rollout, found bool, err error) {
-	return nil, false, nil
-}
-
 func TestForEachCluster(t *testing.T) {
 	ctx := context.Background()
 
@@ -52,7 +33,7 @@ func TestForEachCluster(t *testing.T) {
 		GCPSvcAcctKeyFile: "some-sa-key",
 		UserAgent:         "Isopod",
 		KubeConfigPath:    "kubeconfig",
-		Store:             storeStub{},
+		Store:             store.NoopStore{},
 		DryRun:            false,
 		Force:             false,
 	})
