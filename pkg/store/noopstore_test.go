@@ -1,6 +1,11 @@
 package store
 
-import "testing"
+import (
+	"testing"
+
+	// Required to add flags for tests to run properly.
+	_ "github.com/golang/glog"
+)
 
 func checkErr(t *testing.T, err error, funcName string) {
 	if err != nil {
