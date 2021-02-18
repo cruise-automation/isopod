@@ -32,7 +32,8 @@ import (
 	"github.com/cruise-automation/isopod/pkg/cloud"
 	"github.com/cruise-automation/isopod/pkg/dep"
 	"github.com/cruise-automation/isopod/pkg/runtime"
-	store "github.com/cruise-automation/isopod/pkg/store/kube"
+	"github.com/cruise-automation/isopod/pkg/store"
+	kubeStore "github.com/cruise-automation/isopod/pkg/store/kube"
 	"github.com/cruise-automation/isopod/pkg/util"
 )
 
@@ -42,6 +43,7 @@ var (
 	// optional
 	vaultToken         = flag.String("vault_token", os.Getenv("VAULT_TOKEN"), "Vault token obtained during authentication.")
 	namespace          = flag.String("namespace", "default", "Kubernetes namespace to store metadata in.")
+	noStore            = flag.Bool("no_store", false, "If provided, do not store rollout and addon metadata.")
 	kubeconfig         = flag.String("kubeconfig", "", "Kubernetes client config path.")
 	qps                = flag.Int("qps", 100, "qps to configure the kubernetes RESTClient")
 	burst              = flag.Int("burst", 100, "the burst to configure the kubernetes RESTClient")
@@ -137,7 +139,13 @@ func buildAddonsRuntime(kubeC *rest.Config, mainFile string) (runtime.Runtime, e
 	if helmBaseDir == "" {
 		helmBaseDir = filepath.Dir(mainFile)
 	}
-	st := store.New(cs, *namespace)
+
+	var st store.Store
+	if *noStore {
+		st = store.NoopStore{}
+	} else {
+		st = kubeStore.New(cs, *namespace)
+	}
 
 	var diffFilters []string
 	if *kubeDiffFilterFile != "" {
