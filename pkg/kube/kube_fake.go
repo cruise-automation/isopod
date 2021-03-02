@@ -38,7 +38,7 @@ import (
 
 	rbacsyncv1alpha "github.com/cruise-automation/rbacsync/pkg/apis/rbacsync/v1alpha"
 	arkv1 "github.com/heptio/ark/pkg/apis/ark/v1"
-	istio "github.com/istio/api/tree/master/networking/v1alpha3"
+	istio "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	admissionregistrationv1b1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
