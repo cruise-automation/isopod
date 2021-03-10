@@ -39,6 +39,7 @@ import (
 	rbacsyncv1alpha "github.com/cruise-automation/rbacsync/pkg/apis/rbacsync/v1alpha"
 	arkv1 "github.com/heptio/ark/pkg/apis/ark/v1"
 	istio "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1b1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
@@ -398,6 +399,13 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 			GroupVersion: csr.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "certificatesigningrequests", Kind: "CertificateSigningRequest"},
+			},
+		},
+		{
+			GroupVersion: admissionregistrationv1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "validatingwebhookconfigurations", Kind: "ValidatingWebhookConfiguration"},
+				{Name: "mutatingwebhookconfigurations", Kind: "MutatingWebhookConfiguration"},
 			},
 		},
 		{
