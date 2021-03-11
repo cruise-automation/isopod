@@ -15,6 +15,7 @@
 package kube
 
 import (
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
@@ -71,6 +72,7 @@ var (
 	localSchemeBuilder = runtime.SchemeBuilder{
 		apiextensionsv1beta1.AddToScheme,
 		apiextensionsv1.AddToScheme,
+		admissionregistrationv1.AddToScheme,
 		admissionregistrationv1beta1.AddToScheme,
 		appsv1.AddToScheme,
 		appsv1beta1.AddToScheme,
