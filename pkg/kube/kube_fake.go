@@ -39,6 +39,7 @@ import (
 	rbacsyncv1alpha "github.com/cruise-automation/rbacsync/pkg/apis/rbacsync/v1alpha"
 	arkv1 "github.com/heptio/ark/pkg/apis/ark/v1"
 	istio "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1b1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -386,6 +387,17 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 		},
 		{
 			GroupVersion: istio.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "sidecar", Namespaced: true, Kind: "Sidecar"},
+				{Name: "virtualservice", Namespaced: true, Kind: "VirtualService"},
+				{Name: "destinationrule", Namespaced: true, Kind: "DestinationRule"},
+				{Name: "gateway", Namespaced: true, Kind: "Gateway"},
+				{Name: "serviceentry", Kind: "ServiceEntry"},
+				{Name: "envoyfilter", Namespaced: true, Kind: "EnvoyFilter"},
+			},
+		},
+		{
+			GroupVersion: istiov1b1.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "sidecar", Namespaced: true, Kind: "Sidecar"},
 				{Name: "virtualservice", Namespaced: true, Kind: "VirtualService"},
