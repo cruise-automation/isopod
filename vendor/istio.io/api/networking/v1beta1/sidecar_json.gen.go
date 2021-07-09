@@ -450,18 +450,7 @@ func (this *OutboundTrafficPolicy) UnmarshalJSON(b []byte) error {
 	return SidecarUnmarshaler.Unmarshal(bytes.NewReader(b), this)
 }
 
-// MarshalJSON is a custom marshaler for Localhost
-func (this *Localhost) MarshalJSON() ([]byte, error) {
-	str, err := SidecarMarshaler.MarshalToString(this)
-	return []byte(str), err
-}
-
-// UnmarshalJSON is a custom unmarshaler for Localhost
-func (this *Localhost) UnmarshalJSON(b []byte) error {
-	return SidecarUnmarshaler.Unmarshal(bytes.NewReader(b), this)
-}
-
 var (
 	SidecarMarshaler   = &github_com_gogo_protobuf_jsonpb.Marshaler{}
-	SidecarUnmarshaler = &github_com_gogo_protobuf_jsonpb.Unmarshaler{}
+	SidecarUnmarshaler = &github_com_gogo_protobuf_jsonpb.Unmarshaler{AllowUnknownFields: true}
 )

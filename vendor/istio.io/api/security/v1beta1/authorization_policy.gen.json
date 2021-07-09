@@ -23,7 +23,35 @@
           "action": {
             "$ref": "#/components/schemas/istio.security.v1beta1.AuthorizationPolicy.Action"
           }
-        }
+        },
+        "oneOf": [
+          {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "provider"
+                  ],
+                  "properties": {
+                    "provider": {
+                      "$ref": "#/components/schemas/istio.security.v1beta1.AuthorizationPolicy.ExtensionProvider"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "required": [
+              "provider"
+            ],
+            "properties": {
+              "provider": {
+                "$ref": "#/components/schemas/istio.security.v1beta1.AuthorizationPolicy.ExtensionProvider"
+              }
+            }
+          }
+        ]
       },
       "istio.security.v1beta1.Rule": {
         "description": "Rule matches requests from a list of sources that perform a list of operations subject to a list of conditions. A match occurs when at least one source, operation and condition matches the request. An empty rule is always matched.",
@@ -57,8 +85,20 @@
         "type": "string",
         "enum": [
           "ALLOW",
-          "DENY"
+          "DENY",
+          "AUDIT",
+          "CUSTOM"
         ]
+      },
+      "istio.security.v1beta1.AuthorizationPolicy.ExtensionProvider": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Specifies the name of the extension provider. The list of available providers is defined in the MeshConfig. Note, currently at most 1 extension provider is allowed per workload. Different workloads can use different extension provider.",
+            "type": "string",
+            "format": "string"
+          }
+        }
       },
       "istio.security.v1beta1.Rule.From": {
         "description": "From includes a list or sources.",
@@ -158,7 +198,7 @@
             }
           },
           "ipBlocks": {
-            "description": "Optional. A list of IP blocks, which matches to the \"source.ip\" attribute. Single IP (e.g. \"1.2.3.4\") and CIDR (e.g. \"1.2.3.0/24\") are supported.",
+            "description": "Optional. A list of IP blocks, which matches to the \"source.ip\" attribute. Populated from the source address of the IP packet. Single IP (e.g. \"1.2.3.4\") and CIDR (e.g. \"1.2.3.0/24\") are supported.",
             "type": "array",
             "items": {
               "type": "string",
@@ -167,6 +207,22 @@
           },
           "notIpBlocks": {
             "description": "Optional. A list of negative match of IP blocks.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "remoteIpBlocks": {
+            "description": "Optional. A list of IP blocks, which matches to the \"remote.ip\" attribute. Populated from X-Forwarded-For header or proxy protocol. To make use of this field, you must configure the numTrustedProxies field of the gatewayTopology under the meshConfig when you install Istio or using an annotation on the ingress gateway. See the documentation here: [Configuring Gateway Network Topology](https://istio.io/latest/docs/ops/configuration/traffic-management/network-topologies/). Single IP (e.g. \"1.2.3.4\") and CIDR (e.g. \"1.2.3.0/24\") are supported.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "notRemoteIpBlocks": {
+            "description": "Optional. A list of negative match of remote IP blocks.",
             "type": "array",
             "items": {
               "type": "string",

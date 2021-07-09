@@ -28,6 +28,7 @@ func (in *AuthorizationPolicy) DeepCopyInto(out *AuthorizationPolicy) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
+	in.Status.DeepCopyInto(&out.Status)
 	return
 }
 
@@ -88,6 +89,7 @@ func (in *PeerAuthentication) DeepCopyInto(out *PeerAuthentication) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
+	in.Status.DeepCopyInto(&out.Status)
 	return
 }
 
@@ -148,6 +150,7 @@ func (in *RequestAuthentication) DeepCopyInto(out *RequestAuthentication) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
+	in.Status.DeepCopyInto(&out.Status)
 	return
 }
 
