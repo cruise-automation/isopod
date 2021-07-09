@@ -267,7 +267,8 @@ func addImports(t *testing.T, pkgs starlark.StringDict) {
 	for val, group := range map[string]string{
 		"certificates": "k8s.io.api.certificates.v1beta1",
 		"corev1":       "k8s.io.api.core.v1",
-		"ext":          "k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1beta1",
+		"extv1b1":      "k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1beta1",
+		"extv1":        "k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1",
 		"metav1":       "k8s.io.apimachinery.pkg.apis.meta.v1",
 		"rbacv1":       "k8s.io.api.rbac.v1",
 	} {
@@ -623,9 +624,14 @@ func TestKubePackage(t *testing.T) {
 			wantErr: "<kube.put>: failed to validate/apply metadata for object 0 => k8s.io.api.core.v1.Pod: namespace=`default' argument does not match object's .metadata.namespace=`foobar'",
 		},
 		{
-			name:     "Create CRD definition",
-			expr:     `kube.put(name='foo', api_group='apiextensions.k8s.io', data=[ext.CustomResourceDefinition()])`,
+			name:     "Create CRD definition - extv1b1",
+			expr:     `kube.put(name='foo', api_group='apiextensions.k8s.io', data=[extv1b1.CustomResourceDefinition()])`,
 			wantURLs: urls("/apis/apiextensions.k8s.io/v1beta1/customresourcedefinitions"),
+		},
+		{
+			name:     "Create CRD definition - extv1",
+			expr:     `kube.put(name='foo', api_group='apiextensions.k8s.io', data=[extv1.CustomResourceDefinition()])`,
+			wantURLs: urls("/apis/apiextensions.k8s.io/v1/customresourcedefinitions"),
 		},
 		{
 			name:     "Create YAML object",
