@@ -728,7 +728,7 @@ No
 <td><code>timeout</code></td>
 <td><code><a href="https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#duration">Duration</a></code></td>
 <td>
-<p>Timeout for HTTP requests.</p>
+<p>Timeout for HTTP requests, default is disabled.</p>
 
 </td>
 <td>
@@ -926,6 +926,78 @@ No
 </section>
 <h2 id="Headers">Headers</h2>
 <section>
+<p>Message headers can be manipulated when Envoy forwards requests to,
+or responses from, a destination service. Header manipulation rules can
+be specified for a specific route destination or for all destinations.
+The following VirtualService adds a <code>test</code> header with the value <code>true</code>
+to requests that are routed to any <code>reviews</code> service destination.
+It also removes the <code>foo</code> response header, but only from responses
+coming from the <code>v1</code> subset (version) of the <code>reviews</code> service.</p>
+
+<p>{{<tabset category-name="example">}}
+{{<tab name="v1alpha3" category-value="v1alpha3">}}</p>
+
+<pre><code class="language-yaml">apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: reviews-route
+spec:
+  hosts:
+  - reviews.prod.svc.cluster.local
+  http:
+  - headers:
+      request:
+        set:
+          test: true
+    route:
+    - destination:
+        host: reviews.prod.svc.cluster.local
+        subset: v2
+      weight: 25
+    - destination:
+        host: reviews.prod.svc.cluster.local
+        subset: v1
+      headers:
+        response:
+          remove:
+          - foo
+      weight: 75
+</code></pre>
+
+<p>{{</tab>}}</p>
+
+<p>{{<tab name="v1beta1" category-value="v1beta1">}}</p>
+
+<pre><code class="language-yaml">apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: reviews-route
+spec:
+  hosts:
+  - reviews.prod.svc.cluster.local
+  http:
+  - headers:
+      request:
+        set:
+          test: true
+    route:
+    - destination:
+        host: reviews.prod.svc.cluster.local
+        subset: v2
+      weight: 25
+    - destination:
+        host: reviews.prod.svc.cluster.local
+        subset: v1
+      headers:
+        response:
+          remove:
+          - foo
+      weight: 75
+</code></pre>
+
+<p>{{</tab>}}
+{{</tabset>}}</p>
+
 <table class="message-fields">
 <thead>
 <tr>
@@ -1082,7 +1154,7 @@ mongo.prod.svc.cluster.local to another Mongo server on port 5555.</p>
 <pre><code class="language-yaml">apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
-  name: bookinfo-Mongo
+  name: bookinfo-mongo
 spec:
   hosts:
   - mongo.prod.svc.cluster.local
@@ -1103,7 +1175,7 @@ spec:
 <pre><code class="language-yaml">apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: bookinfo-Mongo
+  name: bookinfo-mongo
 spec:
   hosts:
   - mongo.prod.svc.cluster.local
@@ -2185,10 +2257,11 @@ spec:
 <td><code>attempts</code></td>
 <td><code>int32</code></td>
 <td>
-<p>Number of retries for a given request. The interval
-between retries will be determined automatically (25ms+). Actual
-number of retries attempted depends on the request <code>timeout</code> of the
-<a href="https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute">HTTP route</a>.</p>
+<p>Number of retries to be allowed for a given request. The interval
+between retries will be determined automatically (25ms+). When request
+<code>timeout</code> of the <a href="https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute">HTTP route</a>
+or <code>per_try_timeout</code> is configured, the actual number of retries attempted also depends on
+the specified request <code>timeout</code> and <code>per_try_timeout</code> values.</p>
 
 </td>
 <td>
@@ -2199,7 +2272,10 @@ Yes
 <td><code>perTryTimeout</code></td>
 <td><code><a href="https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#duration">Duration</a></code></td>
 <td>
-<p>Timeout per retry attempt for a given request. format: 1h/1m/1s/1ms. MUST BE &gt;=1ms.</p>
+<p>Timeout per retry attempt for a given request. format: 1h/1m/1s/1ms. MUST BE &gt;=1ms.
+Default is same value as request
+<code>timeout</code> of the <a href="https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute">HTTP route</a>,
+which means no timeout.</p>
 
 </td>
 <td>
@@ -2261,8 +2337,8 @@ spec:
         host: ratings.prod.svc.cluster.local
         subset: v1
     corsPolicy:
-      allowOrigin:
-      - example.com
+      allowOrigins:
+      - exact: https://example.com
       allowMethods:
       - POST
       - GET
@@ -2289,8 +2365,8 @@ spec:
         host: ratings.prod.svc.cluster.local
         subset: v1
     corsPolicy:
-      allowOrigin:
-      - example.com
+      allowOrigins:
+      - exact: https://example.com
       allowMethods:
       - POST
       - GET
@@ -2354,7 +2430,7 @@ No
 <td><code>exposeHeaders</code></td>
 <td><code>string[]</code></td>
 <td>
-<p>A white list of HTTP headers that the browsers are allowed to
+<p>A list of HTTP headers that the browsers are allowed to
 access. Serialized into Access-Control-Expose-Headers header.</p>
 
 </td>

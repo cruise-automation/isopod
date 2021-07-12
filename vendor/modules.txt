@@ -415,12 +415,14 @@ gopkg.in/inf.v0
 gopkg.in/yaml.v2
 # gotest.tools v2.2.0+incompatible
 ## explicit
-# istio.io/api v0.0.0-20200417223136-90a960729620
+# istio.io/api v0.0.0-20210204223132-d90b2f705958
+istio.io/api/analysis/v1alpha1
+istio.io/api/meta/v1alpha1
 istio.io/api/networking/v1alpha3
 istio.io/api/networking/v1beta1
 istio.io/api/security/v1beta1
 istio.io/api/type/v1beta1
-# istio.io/client-go v0.0.0-20200420191536-73a3b02f1806
+# istio.io/client-go v1.9.0
 ## explicit
 istio.io/client-go/pkg/apis/networking/v1alpha3
 istio.io/client-go/pkg/apis/networking/v1beta1

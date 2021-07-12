@@ -190,6 +190,7 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 // representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations.
 // Clients may not set this value. It is represented in RFC3339 form and is in UTC.
 // Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
+// +cue-gen:VirtualService:preserveUnknownFields:false
 // -->
 //
 // <!-- go code generation tags
@@ -275,9 +276,6 @@ type VirtualService struct {
 	// The value "." is reserved and defines an export to the same namespace that
 	// the virtual service is declared in. Similarly the value "*" is reserved and
 	// defines an export to all namespaces.
-	//
-	// NOTE: in the current release, the `exportTo` value is restricted to
-	// "." or "*" (i.e., the current namespace or all namespaces).
 	ExportTo             []string `protobuf:"bytes,6,rep,name=export_to,json=exportTo,proto3" json:"export_to,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -718,7 +716,7 @@ type HTTPRoute struct {
 	// Rewrite HTTP URIs and Authority headers. Rewrite cannot be used with
 	// Redirect primitive. Rewrite will be performed before forwarding.
 	Rewrite *HTTPRewrite `protobuf:"bytes,4,opt,name=rewrite,proto3" json:"rewrite,omitempty"`
-	// Timeout for HTTP requests.
+	// Timeout for HTTP requests, default is disabled.
 	Timeout *types.Duration `protobuf:"bytes,6,opt,name=timeout,proto3" json:"timeout,omitempty"`
 	// Retry policy for HTTP requests.
 	Retries *HTTPRetry `protobuf:"bytes,7,opt,name=retries,proto3" json:"retries,omitempty"`
@@ -1002,6 +1000,75 @@ func (m *Delegate) GetNamespace() string {
 	return ""
 }
 
+// Message headers can be manipulated when Envoy forwards requests to,
+// or responses from, a destination service. Header manipulation rules can
+// be specified for a specific route destination or for all destinations.
+// The following VirtualService adds a `test` header with the value `true`
+// to requests that are routed to any `reviews` service destination.
+// It also removes the `foo` response header, but only from responses
+// coming from the `v1` subset (version) of the `reviews` service.
+//
+// {{<tabset category-name="example">}}
+// {{<tab name="v1alpha3" category-value="v1alpha3">}}
+// ```yaml
+// apiVersion: networking.istio.io/v1alpha3
+// kind: VirtualService
+// metadata:
+//   name: reviews-route
+// spec:
+//   hosts:
+//   - reviews.prod.svc.cluster.local
+//   http:
+//   - headers:
+//       request:
+//         set:
+//           test: true
+//     route:
+//     - destination:
+//         host: reviews.prod.svc.cluster.local
+//         subset: v2
+//       weight: 25
+//     - destination:
+//         host: reviews.prod.svc.cluster.local
+//         subset: v1
+//       headers:
+//         response:
+//           remove:
+//           - foo
+//       weight: 75
+// ```
+// {{</tab>}}
+//
+// {{<tab name="v1beta1" category-value="v1beta1">}}
+// ```yaml
+// apiVersion: networking.istio.io/v1beta1
+// kind: VirtualService
+// metadata:
+//   name: reviews-route
+// spec:
+//   hosts:
+//   - reviews.prod.svc.cluster.local
+//   http:
+//   - headers:
+//       request:
+//         set:
+//           test: true
+//     route:
+//     - destination:
+//         host: reviews.prod.svc.cluster.local
+//         subset: v2
+//       weight: 25
+//     - destination:
+//         host: reviews.prod.svc.cluster.local
+//         subset: v1
+//       headers:
+//         response:
+//           remove:
+//           - foo
+//       weight: 75
+// ```
+// {{</tab>}}
+// {{</tabset>}}
 type Headers struct {
 	// Header manipulation rules to apply before forwarding a request
 	// to the destination service
@@ -1263,7 +1330,7 @@ func (m *TLSRoute) GetRoute() []*RouteDestination {
 // apiVersion: networking.istio.io/v1alpha3
 // kind: VirtualService
 // metadata:
-//   name: bookinfo-Mongo
+//   name: bookinfo-mongo
 // spec:
 //   hosts:
 //   - mongo.prod.svc.cluster.local
@@ -1283,7 +1350,7 @@ func (m *TLSRoute) GetRoute() []*RouteDestination {
 // apiVersion: networking.istio.io/v1beta1
 // kind: VirtualService
 // metadata:
-//   name: bookinfo-Mongo
+//   name: bookinfo-mongo
 // spec:
 //   hosts:
 //   - mongo.prod.svc.cluster.local
@@ -2409,13 +2476,13 @@ type isStringMatch_MatchType interface {
 }
 
 type StringMatch_Exact struct {
-	Exact string `protobuf:"bytes,1,opt,name=exact,proto3,oneof"`
+	Exact string `protobuf:"bytes,1,opt,name=exact,proto3,oneof" json:"exact,omitempty"`
 }
 type StringMatch_Prefix struct {
-	Prefix string `protobuf:"bytes,2,opt,name=prefix,proto3,oneof"`
+	Prefix string `protobuf:"bytes,2,opt,name=prefix,proto3,oneof" json:"prefix,omitempty"`
 }
 type StringMatch_Regex struct {
-	Regex string `protobuf:"bytes,3,opt,name=regex,proto3,oneof"`
+	Regex string `protobuf:"bytes,3,opt,name=regex,proto3,oneof" json:"regex,omitempty"`
 }
 
 func (*StringMatch_Exact) isStringMatch_MatchType()  {}
@@ -2508,12 +2575,16 @@ func (*StringMatch) XXX_OneofWrappers() []interface{} {
 // {{</tabset>}}
 //
 type HTTPRetry struct {
-	// Number of retries for a given request. The interval
-	// between retries will be determined automatically (25ms+). Actual
-	// number of retries attempted depends on the request `timeout` of the
-	// [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute).
+	// Number of retries to be allowed for a given request. The interval
+	// between retries will be determined automatically (25ms+). When request
+	// `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute)
+	// or `per_try_timeout` is configured, the actual number of retries attempted also depends on
+	// the specified request `timeout` and `per_try_timeout` values.
 	Attempts int32 `protobuf:"varint,1,opt,name=attempts,proto3" json:"attempts,omitempty"`
 	// Timeout per retry attempt for a given request. format: 1h/1m/1s/1ms. MUST BE >=1ms.
+	// Default is same value as request
+	// `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute),
+	// which means no timeout.
 	PerTryTimeout *types.Duration `protobuf:"bytes,2,opt,name=per_try_timeout,json=perTryTimeout,proto3" json:"per_try_timeout,omitempty"`
 	// Specifies the conditions under which retry takes place.
 	// One or more policies can be specified using a ‘,’ delimited list.
@@ -2613,8 +2684,8 @@ func (m *HTTPRetry) GetRetryRemoteLocalities() *types.BoolValue {
 //         host: ratings.prod.svc.cluster.local
 //         subset: v1
 //     corsPolicy:
-//       allowOrigin:
-//       - example.com
+//       allowOrigins:
+//       - exact: https://example.com
 //       allowMethods:
 //       - POST
 //       - GET
@@ -2640,8 +2711,8 @@ func (m *HTTPRetry) GetRetryRemoteLocalities() *types.BoolValue {
 //         host: ratings.prod.svc.cluster.local
 //         subset: v1
 //     corsPolicy:
-//       allowOrigin:
-//       - example.com
+//       allowOrigins:
+//       - exact: https://example.com
 //       allowMethods:
 //       - POST
 //       - GET
@@ -2669,7 +2740,7 @@ type CorsPolicy struct {
 	// List of HTTP headers that can be used when requesting the
 	// resource. Serialized to Access-Control-Allow-Headers header.
 	AllowHeaders []string `protobuf:"bytes,3,rep,name=allow_headers,json=allowHeaders,proto3" json:"allow_headers,omitempty"`
-	// A white list of HTTP headers that the browsers are allowed to
+	// A list of HTTP headers that the browsers are allowed to
 	// access. Serialized into Access-Control-Expose-Headers header.
 	ExposeHeaders []string `protobuf:"bytes,4,rep,name=expose_headers,json=exposeHeaders,proto3" json:"expose_headers,omitempty"`
 	// Specifies how long the results of a preflight request can be
@@ -2950,10 +3021,10 @@ type isHTTPFaultInjection_Delay_HttpDelayType interface {
 }
 
 type HTTPFaultInjection_Delay_FixedDelay struct {
-	FixedDelay *types.Duration `protobuf:"bytes,2,opt,name=fixed_delay,json=fixedDelay,proto3,oneof"`
+	FixedDelay *types.Duration `protobuf:"bytes,2,opt,name=fixed_delay,json=fixedDelay,proto3,oneof" json:"fixed_delay,omitempty"`
 }
 type HTTPFaultInjection_Delay_ExponentialDelay struct {
-	ExponentialDelay *types.Duration `protobuf:"bytes,3,opt,name=exponential_delay,json=exponentialDelay,proto3,oneof"`
+	ExponentialDelay *types.Duration `protobuf:"bytes,3,opt,name=exponential_delay,json=exponentialDelay,proto3,oneof" json:"exponential_delay,omitempty"`
 }
 
 func (*HTTPFaultInjection_Delay_FixedDelay) isHTTPFaultInjection_Delay_HttpDelayType()       {}
@@ -3110,13 +3181,13 @@ type isHTTPFaultInjection_Abort_ErrorType interface {
 }
 
 type HTTPFaultInjection_Abort_HttpStatus struct {
-	HttpStatus int32 `protobuf:"varint,2,opt,name=http_status,json=httpStatus,proto3,oneof"`
+	HttpStatus int32 `protobuf:"varint,2,opt,name=http_status,json=httpStatus,proto3,oneof" json:"http_status,omitempty"`
 }
 type HTTPFaultInjection_Abort_GrpcStatus struct {
-	GrpcStatus string `protobuf:"bytes,3,opt,name=grpc_status,json=grpcStatus,proto3,oneof"`
+	GrpcStatus string `protobuf:"bytes,3,opt,name=grpc_status,json=grpcStatus,proto3,oneof" json:"grpc_status,omitempty"`
 }
 type HTTPFaultInjection_Abort_Http2Error struct {
-	Http2Error string `protobuf:"bytes,4,opt,name=http2_error,json=http2Error,proto3,oneof"`
+	Http2Error string `protobuf:"bytes,4,opt,name=http2_error,json=http2Error,proto3,oneof" json:"http2_error,omitempty"`
 }
 
 func (*HTTPFaultInjection_Abort_HttpStatus) isHTTPFaultInjection_Abort_ErrorType() {}
@@ -4663,7 +4734,8 @@ func (m *StringMatch) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 }
 
 func (m *StringMatch_Exact) MarshalTo(dAtA []byte) (int, error) {
-	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
 func (m *StringMatch_Exact) MarshalToSizedBuffer(dAtA []byte) (int, error) {
@@ -4676,7 +4748,8 @@ func (m *StringMatch_Exact) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 func (m *StringMatch_Prefix) MarshalTo(dAtA []byte) (int, error) {
-	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
 func (m *StringMatch_Prefix) MarshalToSizedBuffer(dAtA []byte) (int, error) {
@@ -4689,7 +4762,8 @@ func (m *StringMatch_Prefix) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 func (m *StringMatch_Regex) MarshalTo(dAtA []byte) (int, error) {
-	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
 func (m *StringMatch_Regex) MarshalToSizedBuffer(dAtA []byte) (int, error) {
@@ -4970,7 +5044,8 @@ func (m *HTTPFaultInjection_Delay) MarshalToSizedBuffer(dAtA []byte) (int, error
 }
 
 func (m *HTTPFaultInjection_Delay_FixedDelay) MarshalTo(dAtA []byte) (int, error) {
-	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
 func (m *HTTPFaultInjection_Delay_FixedDelay) MarshalToSizedBuffer(dAtA []byte) (int, error) {
@@ -4990,7 +5065,8 @@ func (m *HTTPFaultInjection_Delay_FixedDelay) MarshalToSizedBuffer(dAtA []byte) 
 	return len(dAtA) - i, nil
 }
 func (m *HTTPFaultInjection_Delay_ExponentialDelay) MarshalTo(dAtA []byte) (int, error) {
-	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
 func (m *HTTPFaultInjection_Delay_ExponentialDelay) MarshalToSizedBuffer(dAtA []byte) (int, error) {
@@ -5058,7 +5134,8 @@ func (m *HTTPFaultInjection_Abort) MarshalToSizedBuffer(dAtA []byte) (int, error
 }
 
 func (m *HTTPFaultInjection_Abort_HttpStatus) MarshalTo(dAtA []byte) (int, error) {
-	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
 func (m *HTTPFaultInjection_Abort_HttpStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
@@ -5069,7 +5146,8 @@ func (m *HTTPFaultInjection_Abort_HttpStatus) MarshalToSizedBuffer(dAtA []byte) 
 	return len(dAtA) - i, nil
 }
 func (m *HTTPFaultInjection_Abort_GrpcStatus) MarshalTo(dAtA []byte) (int, error) {
-	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
 func (m *HTTPFaultInjection_Abort_GrpcStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
@@ -5082,7 +5160,8 @@ func (m *HTTPFaultInjection_Abort_GrpcStatus) MarshalToSizedBuffer(dAtA []byte) 
 	return len(dAtA) - i, nil
 }
 func (m *HTTPFaultInjection_Abort_Http2Error) MarshalTo(dAtA []byte) (int, error) {
-	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
 func (m *HTTPFaultInjection_Abort_Http2Error) MarshalToSizedBuffer(dAtA []byte) (int, error) {
@@ -6209,10 +6288,7 @@ func (m *VirtualService) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -6363,10 +6439,7 @@ func (m *Destination) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -6913,10 +6986,7 @@ func (m *HTTPRoute) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -7031,10 +7101,7 @@ func (m *Delegate) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -7157,10 +7224,7 @@ func (m *Headers) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -7321,7 +7385,7 @@ func (m *Headers_HeaderOperations) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthVirtualService
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -7448,7 +7512,7 @@ func (m *Headers_HeaderOperations) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthVirtualService
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -7497,10 +7561,7 @@ func (m *Headers_HeaderOperations) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -7619,10 +7680,7 @@ func (m *TLSRoute) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -7741,10 +7799,7 @@ func (m *TCPRoute) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -8051,7 +8106,7 @@ func (m *HTTPMatchRequest) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthVirtualService
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -8197,7 +8252,7 @@ func (m *HTTPMatchRequest) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthVirtualService
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -8358,7 +8413,7 @@ func (m *HTTPMatchRequest) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthVirtualService
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -8539,7 +8594,7 @@ func (m *HTTPMatchRequest) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthVirtualService
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -8588,10 +8643,7 @@ func (m *HTTPMatchRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -8733,10 +8785,7 @@ func (m *HTTPRouteDestination) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -8842,10 +8891,7 @@ func (m *RouteDestination) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -9089,7 +9135,7 @@ func (m *L4MatchAttributes) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthVirtualService
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -9170,10 +9216,7 @@ func (m *L4MatchAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -9417,7 +9460,7 @@ func (m *TLSMatchAttributes) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthVirtualService
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -9498,10 +9541,7 @@ func (m *TLSMatchAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -9635,10 +9675,7 @@ func (m *HTTPRedirect) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -9753,10 +9790,7 @@ func (m *HTTPRewrite) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -9903,10 +9937,7 @@ func (m *StringMatch) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -10080,10 +10111,7 @@ func (m *HTTPRetry) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -10368,10 +10396,7 @@ func (m *CorsPolicy) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -10494,10 +10519,7 @@ func (m *HTTPFaultInjection) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -10673,10 +10695,7 @@ func (m *HTTPFaultInjection_Delay) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -10847,10 +10866,7 @@ func (m *HTTPFaultInjection_Abort) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -10920,10 +10936,7 @@ func (m *PortSelector) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -10985,10 +10998,7 @@ func (m *Percent) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthVirtualService
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthVirtualService
 			}
 			if (iNdEx + skippy) > l {
@@ -11007,6 +11017,7 @@ func (m *Percent) Unmarshal(dAtA []byte) error {
 func skipVirtualService(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
+	depth := 0
 	for iNdEx < l {
 		var wire uint64
 		for shift := uint(0); ; shift += 7 {
@@ -11038,10 +11049,8 @@ func skipVirtualService(dAtA []byte) (n int, err error) {
 					break
 				}
 			}
-			return iNdEx, nil
 		case 1:
 			iNdEx += 8
-			return iNdEx, nil
 		case 2:
 			var length int
 			for shift := uint(0); ; shift += 7 {
@@ -11062,55 +11071,30 @@ func skipVirtualService(dAtA []byte) (n int, err error) {
 				return 0, ErrInvalidLengthVirtualService
 			}
 			iNdEx += length
-			if iNdEx < 0 {
-				return 0, ErrInvalidLengthVirtualService
-			}
-			return iNdEx, nil
 		case 3:
-			for {
-				var innerWire uint64
-				var start int = iNdEx
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return 0, ErrIntOverflowVirtualService
-					}
-					if iNdEx >= l {
-						return 0, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					innerWire |= (uint64(b) & 0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				innerWireType := int(innerWire & 0x7)
-				if innerWireType == 4 {
-					break
-				}
-				next, err := skipVirtualService(dAtA[start:])
-				if err != nil {
-					return 0, err
-				}
-				iNdEx = start + next
-				if iNdEx < 0 {
-					return 0, ErrInvalidLengthVirtualService
-				}
-			}
-			return iNdEx, nil
+			depth++
 		case 4:
-			return iNdEx, nil
+			if depth == 0 {
+				return 0, ErrUnexpectedEndOfGroupVirtualService
+			}
+			depth--
 		case 5:
 			iNdEx += 4
-			return iNdEx, nil
 		default:
 			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
 		}
+		if iNdEx < 0 {
+			return 0, ErrInvalidLengthVirtualService
+		}
+		if depth == 0 {
+			return iNdEx, nil
+		}
 	}
-	panic("unreachable")
+	return 0, io.ErrUnexpectedEOF
 }
 
 var (
-	ErrInvalidLengthVirtualService = fmt.Errorf("proto: negative length found during unmarshaling")
-	ErrIntOverflowVirtualService   = fmt.Errorf("proto: integer overflow")
+	ErrInvalidLengthVirtualService        = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowVirtualService          = fmt.Errorf("proto: integer overflow")
+	ErrUnexpectedEndOfGroupVirtualService = fmt.Errorf("proto: unexpected end of group")
 )
