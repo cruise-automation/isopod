@@ -40,6 +40,7 @@ import (
 	arkv1 "github.com/heptio/ark/pkg/apis/ark/v1"
 	istio "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	istiosecurityv1beta1 "istio.io/client-go/pkg/apis/security/v1beta1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1b1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -405,6 +406,12 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 				{Name: "gateway", Namespaced: true, Kind: "Gateway"},
 				{Name: "serviceentry", Kind: "ServiceEntry"},
 				{Name: "envoyfilter", Namespaced: true, Kind: "EnvoyFilter"},
+			},
+		},
+		{
+			GroupVersion: istiosecurityv1beta1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "authorizationpolicy", Namespaced: true, Kind: "AuthorizationPolicy"},
 			},
 		},
 		{
