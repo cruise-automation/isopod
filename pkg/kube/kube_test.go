@@ -27,7 +27,7 @@ import (
 	"testing"
 
 	gogo_proto "github.com/gogo/protobuf/proto"
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/google/go-cmp/cmp"
 	"github.com/stripe/skycfg"
 	"go.starlark.net/starlark"
@@ -38,7 +38,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	appsv1 "k8s.io/api/apps/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -244,7 +244,7 @@ func fakeKubernetes(
 type protoRegistry struct{}
 
 func (*protoRegistry) UnstableProtoMessageType(name string) (reflect.Type, error) {
-	if t := proto.MessageType(name); t != nil {
+	if t := proto.MessageType(name); t != nil { //nolint:staticcheck
 		return t, nil
 	}
 	if t := gogo_proto.MessageType(name); t != nil {
@@ -254,7 +254,7 @@ func (*protoRegistry) UnstableProtoMessageType(name string) (reflect.Type, error
 }
 
 func (*protoRegistry) UnstableEnumValueMap(name string) map[string]int32 {
-	if ev := proto.EnumValueMap(name); ev != nil {
+	if ev := proto.EnumValueMap(name); ev != nil { //nolint:staticcheck
 		return ev
 	}
 	if ev := gogo_proto.EnumValueMap(name); ev != nil {
@@ -265,7 +265,7 @@ func (*protoRegistry) UnstableEnumValueMap(name string) map[string]int32 {
 
 func addImports(t *testing.T, pkgs starlark.StringDict) {
 	for val, group := range map[string]string{
-		"certificates": "k8s.io.api.certificates.v1beta1",
+		"certificates": "k8s.io.api.certificates.v1",
 		"corev1":       "k8s.io.api.core.v1",
 		"ext":          "k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1beta1",
 		"metav1":       "k8s.io.apimachinery.pkg.apis.meta.v1",
@@ -375,7 +375,7 @@ func TestKubePackage(t *testing.T) {
 				},
 			},
 			wantURLs:   urls("/api/v1/namespaces/bar/pods/foo"),
-			wantResult: `<k8s.io.api.core.v1.Pod TypeMeta:<kind:"Pod" apiVersion:"v1" > metadata:<name:"foo" creationTimestamp:<0001-01-01T00:00:00Z> > spec:<> status:<> >`,
+			wantResult: `<k8s.io.api.core.v1.Pod metadata:<name:"foo" > >`,
 		},
 		{
 			name: "Pod Exists",
@@ -590,7 +590,7 @@ func TestKubePackage(t *testing.T) {
 				},
 			},
 			wantURLs:   urls("/apis/apps/v1/namespaces/default/deployments/test"),
-			wantResult: `<k8s.io.api.apps.v1.Deployment TypeMeta:<kind:"Deployment" apiVersion:"apps/v1" > metadata:<name:"test" creationTimestamp:<0001-01-01T00:00:00Z> > spec:<template:<metadata:<creationTimestamp:<0001-01-01T00:00:00Z> > spec:<> > strategy:<> > status:<> >`,
+			wantResult: `<k8s.io.api.apps.v1.Deployment metadata:<name:"test" > >`,
 		},
 		{
 			name: "Delete Deployment",
@@ -666,15 +666,15 @@ func TestKubePackage(t *testing.T) {
 		{
 			name: "Create CSR Subresource",
 			expr: `kube.put(name='foo', subresource='approval', api_group='certificates.k8s.io', data=[certificates.CertificateSigningRequest()])`,
-			gotObj: &certificatesv1beta1.CertificateSigningRequest{
+			gotObj: &certificatesv1.CertificateSigningRequest{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "CertificateSigningRequest",
-					APIVersion: "certificates.k8s.io/v1beta1",
+					APIVersion: "certificates.k8s.io/v1",
 				},
 			},
 			wantURLs: []string{
-				"/apis/certificates.k8s.io/v1beta1/certificatesigningrequests/foo",
-				"/apis/certificates.k8s.io/v1beta1/certificatesigningrequests/foo/approval",
+				"/apis/certificates.k8s.io/v1/certificatesigningrequests/foo",
+				"/apis/certificates.k8s.io/v1/certificatesigningrequests/foo/approval",
 			},
 		},
 		{

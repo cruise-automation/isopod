@@ -21,7 +21,7 @@ import (
 	"regexp"
 
 	gogo_proto "github.com/gogo/protobuf/proto"
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	vapi "github.com/hashicorp/vault/api"
 	"github.com/stripe/skycfg"
 	"go.starlark.net/starlark"
@@ -87,7 +87,7 @@ type protoRegistry struct{}
 // UnstableProtoMessageType implements lookup from full protobuf message name
 // to a Go type of the generated message struct.
 func (*protoRegistry) UnstableProtoMessageType(name string) (reflect.Type, error) {
-	if t := proto.MessageType(name); t != nil {
+	if t := proto.MessageType(name); t != nil { //nolint:staticcheck
 		return t, nil
 	}
 	if t := gogo_proto.MessageType(name); t != nil {
@@ -99,7 +99,7 @@ func (*protoRegistry) UnstableProtoMessageType(name string) (reflect.Type, error
 // UnstableEnumValueMap implements lookup from go-protobuf enum name to the
 // name->value map.
 func (*protoRegistry) UnstableEnumValueMap(name string) map[string]int32 {
-	if ev := proto.EnumValueMap(name); ev != nil {
+	if ev := proto.EnumValueMap(name); ev != nil { //nolint:staticcheck
 		return ev
 	}
 	if ev := gogo_proto.EnumValueMap(name); ev != nil {

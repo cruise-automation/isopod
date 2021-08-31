@@ -163,7 +163,7 @@ func TestDiff(t *testing.T) {
 				`metadata.annotations["cloud.google.com/neg-status"]`,
 				`spec.template.spec.serviceAccount`,
 			}
-			err := printUnifiedDiff(&rw, tc.live, tc.head, tc.live.(runtime.Object).GetObjectKind().GroupVersionKind(), "foobar", diffFilters)
+			err := printUnifiedDiff(&rw, tc.live, tc.head, tc.live.GetObjectKind().GroupVersionKind(), "foobar", diffFilters)
 			if err != nil {
 				t.Fatalf("Failed to write diff: %v", err)
 			}
