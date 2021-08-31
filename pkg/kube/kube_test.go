@@ -375,7 +375,7 @@ func TestKubePackage(t *testing.T) {
 				},
 			},
 			wantURLs:   urls("/api/v1/namespaces/bar/pods/foo"),
-			wantResult: `<k8s.io.api.core.v1.Pod TypeMeta:<kind:"Pod" apiVersion:"v1" > metadata:<name:"foo" creationTimestamp:<0001-01-01T00:00:00Z> > spec:<> status:<> >`,
+			wantResult: `<k8s.io.api.core.v1.Pod metadata:<name:"foo" > >`,
 		},
 		{
 			name: "Pod Exists",
@@ -590,7 +590,7 @@ func TestKubePackage(t *testing.T) {
 				},
 			},
 			wantURLs:   urls("/apis/apps/v1/namespaces/default/deployments/test"),
-			wantResult: `<k8s.io.api.apps.v1.Deployment TypeMeta:<kind:"Deployment" apiVersion:"apps/v1" > metadata:<name:"test" creationTimestamp:<0001-01-01T00:00:00Z> > spec:<template:<metadata:<creationTimestamp:<0001-01-01T00:00:00Z> > spec:<> > strategy:<> > status:<> >`,
+			wantResult: `<k8s.io.api.apps.v1.Deployment metadata:<name:"test" > >`,
 		},
 		{
 			name: "Delete Deployment",
