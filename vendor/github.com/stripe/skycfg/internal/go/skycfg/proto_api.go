@@ -25,6 +25,7 @@ import (
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 	"go.starlark.net/starlark"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -53,6 +54,7 @@ func NewProtoModule(registry ProtoRegistry) *ProtoModule {
 			"merge":        starlark.NewBuiltin("proto.merge", fnProtoMerge),
 			"set_defaults": starlark.NewBuiltin("proto.set_defaults", fnProtoSetDefaults),
 			"to_json":      starlark.NewBuiltin("proto.to_json", fnProtoToJson),
+			"to_any":       starlark.NewBuiltin("proto.to_any", fnProtoToAny),
 			"to_text":      starlark.NewBuiltin("proto.to_text", fnProtoToText),
 			"to_yaml":      starlark.NewBuiltin("proto.to_yaml", fnProtoToYaml),
 		},
@@ -103,6 +105,7 @@ func fnProtoClear(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple,
 		return nil, err
 	}
 	msg.msg.Reset()
+	msg.resetAttrCache()
 	return msg, nil
 }
 
@@ -138,6 +141,7 @@ func fnProtoMerge(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple,
 		return nil, err
 	}
 	proto.Merge(dst.msg, src.msg)
+	dst.resetAttrCache()
 	return dst, nil
 }
 
@@ -165,10 +169,7 @@ func (mod *ProtoModule) fnProtoPackage(t *starlark.Thread, fn *starlark.Builtin,
 	if err := starlark.UnpackPositionalArgs("proto.package", args, kwargs, 1, &packageName); err != nil {
 		return nil, err
 	}
-	return &skyProtoPackage{
-		registry: mod.Registry,
-		name:     packageName,
-	}, nil
+	return NewSkyProtoPackage(mod.Registry, packageName), nil
 }
 
 func wantSingleProtoMessage(fnName string, args starlark.Tuple, kwargs []starlark.Tuple, msg **skyProtoMessage) error {
@@ -232,6 +233,24 @@ func fnProtoToJson(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple
 		jsonData = buf.Bytes()
 	}
 	return starlark.String(jsonData), nil
+}
+
+// Implementation of the `proto.to_any()` built-in function. Returns a
+// skyProtoMessage with an `Any` proto.Message in it.
+func fnProtoToAny(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var msg *skyProtoMessage
+	err := wantSingleProtoMessage(fn.Name(), args, kwargs, &msg)
+	if err != nil {
+		return nil, err
+	}
+
+	// Returns a golang any.Any type.
+	any, err := ptypes.MarshalAny(msg.msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewSkyProtoMessage(any), nil
 }
 
 // Implementation of the `proto.to_yaml()` built-in function. Returns the

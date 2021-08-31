@@ -38,7 +38,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	appsv1 "k8s.io/api/apps/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -265,7 +265,7 @@ func (*protoRegistry) UnstableEnumValueMap(name string) map[string]int32 {
 
 func addImports(t *testing.T, pkgs starlark.StringDict) {
 	for val, group := range map[string]string{
-		"certificates": "k8s.io.api.certificates.v1beta1",
+		"certificates": "k8s.io.api.certificates.v1",
 		"corev1":       "k8s.io.api.core.v1",
 		"ext":          "k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1beta1",
 		"metav1":       "k8s.io.apimachinery.pkg.apis.meta.v1",
@@ -666,15 +666,15 @@ func TestKubePackage(t *testing.T) {
 		{
 			name: "Create CSR Subresource",
 			expr: `kube.put(name='foo', subresource='approval', api_group='certificates.k8s.io', data=[certificates.CertificateSigningRequest()])`,
-			gotObj: &certificatesv1beta1.CertificateSigningRequest{
+			gotObj: &certificatesv1.CertificateSigningRequest{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "CertificateSigningRequest",
-					APIVersion: "certificates.k8s.io/v1beta1",
+					APIVersion: "certificates.k8s.io/v1",
 				},
 			},
 			wantURLs: []string{
-				"/apis/certificates.k8s.io/v1beta1/certificatesigningrequests/foo",
-				"/apis/certificates.k8s.io/v1beta1/certificatesigningrequests/foo/approval",
+				"/apis/certificates.k8s.io/v1/certificatesigningrequests/foo",
+				"/apis/certificates.k8s.io/v1/certificatesigningrequests/foo/approval",
 			},
 		},
 		{
