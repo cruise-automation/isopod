@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	gogo_proto "github.com/gogo/protobuf/proto"
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/restmapper"

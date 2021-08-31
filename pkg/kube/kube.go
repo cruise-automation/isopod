@@ -29,7 +29,7 @@ import (
 	"time"
 
 	log "github.com/golang/glog"
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/stripe/skycfg"
 	"go.starlark.net/starlark"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -371,7 +371,7 @@ func (m *kubePackage) kubeGetFn(t *starlark.Thread, b *starlark.Builtin, args st
 
 	// Optional api_group argument.
 	var apiGroup starlark.String
-	var wait time.Duration = 30 * time.Second
+	var wait = 30 * time.Second
 	var wantJSON bool
 	for _, kv := range kwargs[1:] {
 		switch string(kv[0].(starlark.String)) {

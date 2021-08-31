@@ -27,7 +27,7 @@ import (
 	"testing"
 
 	gogo_proto "github.com/gogo/protobuf/proto"
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/google/go-cmp/cmp"
 	"github.com/stripe/skycfg"
 	"go.starlark.net/starlark"
@@ -244,7 +244,7 @@ func fakeKubernetes(
 type protoRegistry struct{}
 
 func (*protoRegistry) UnstableProtoMessageType(name string) (reflect.Type, error) {
-	if t := proto.MessageType(name); t != nil {
+	if t := proto.MessageType(name); t != nil { //nolint:staticcheck
 		return t, nil
 	}
 	if t := gogo_proto.MessageType(name); t != nil {
@@ -254,7 +254,7 @@ func (*protoRegistry) UnstableProtoMessageType(name string) (reflect.Type, error
 }
 
 func (*protoRegistry) UnstableEnumValueMap(name string) map[string]int32 {
-	if ev := proto.EnumValueMap(name); ev != nil {
+	if ev := proto.EnumValueMap(name); ev != nil { //nolint:staticcheck
 		return ev
 	}
 	if ev := gogo_proto.EnumValueMap(name); ev != nil {
