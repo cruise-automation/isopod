@@ -151,7 +151,7 @@ func (h *fakeKube) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			csReq.Status.Certificate = []byte("cert")
 			csReq.TypeMeta = metav1.TypeMeta{
-				APIVersion: "certificates.k8s.io/v1beta1",
+				APIVersion: "certificates.k8s.io/v1",
 				Kind:       "CertificateSigningRequest",
 			}
 			data, err = apiruntime.Encode(unstructured.UnstructuredJSONScheme, csReq)
