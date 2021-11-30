@@ -156,14 +156,17 @@ func (h *fakeKube) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					APIVersion: "certificates.k8s.io/v1beta1",
 					Kind:       "CertificateSigningRequest",
 				}
+				csReq.Status.Certificate = []byte("cert")
+				data, err = apiruntime.Encode(unstructured.UnstructuredJSONScheme, csReq)
 			} else {
 				csReq.TypeMeta = metav1.TypeMeta{
 					APIVersion: "certificates.k8s.io/v1",
 					Kind:       "CertificateSigningRequest",
 				}
+				csReq.Status.Certificate = []byte("cert")
+				data, err = apiruntime.Encode(unstructured.UnstructuredJSONScheme, csReq)
 			}
-			csReq.Status.Certificate = []byte("cert")
-			data, err = apiruntime.Encode(unstructured.UnstructuredJSONScheme, csReq)
+
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
