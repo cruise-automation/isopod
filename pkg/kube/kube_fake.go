@@ -51,6 +51,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1b1 "k8s.io/api/batch/v1beta1"
 	csr "k8s.io/api/certificates/v1"
+	csrv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -146,14 +147,22 @@ func (h *fakeKube) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			csReq, ok := obj.(*csr.CertificateSigningRequest)
 			if !ok {
-				http.Error(w, "obj is not a *csr.CertificateSigningRequest", http.StatusBadRequest)
-				return
+				csReq, okV1b1 := obj.(*csrv1b1.CertificateSigningRequest)
+				if !okV1b1 {
+					http.Error(w, "obj is not a *csr.CertificateSigningRequest", http.StatusBadRequest)
+					return
+				}
+				csReq.TypeMeta = metav1.TypeMeta{
+					APIVersion: "certificates.k8s.io/v1beta1",
+					Kind:       "CertificateSigningRequest",
+				}
+			} else {
+				csReq.TypeMeta = metav1.TypeMeta{
+					APIVersion: "certificates.k8s.io/v1",
+					Kind:       "CertificateSigningRequest",
+				}
 			}
 			csReq.Status.Certificate = []byte("cert")
-			csReq.TypeMeta = metav1.TypeMeta{
-				APIVersion: "certificates.k8s.io/v1",
-				Kind:       "CertificateSigningRequest",
-			}
 			data, err = apiruntime.Encode(unstructured.UnstructuredJSONScheme, csReq)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -416,6 +425,12 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 		},
 		{
 			GroupVersion: csr.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "certificatesigningrequests", Kind: "CertificateSigningRequest"},
+			},
+		},
+		{
+			GroupVersion: csrv1b1.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "certificatesigningrequests", Kind: "CertificateSigningRequest"},
 			},
