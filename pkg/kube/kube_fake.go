@@ -145,25 +145,30 @@ func (h *fakeKube) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			csReq, ok := obj.(*csr.CertificateSigningRequest)
+			_, ok := obj.(*csr.CertificateSigningRequest)
 			if !ok {
-				csReq, okV1b1 := obj.(*csrv1b1.CertificateSigningRequest)
+				_, okV1b1 := obj.(*csrv1b1.CertificateSigningRequest)
 				if !okV1b1 {
 					http.Error(w, "obj is not a *csr.CertificateSigningRequest", http.StatusBadRequest)
 					return
 				}
+				csReq := obj.(*csrv1b1.CertificateSigningRequest)
 				csReq.TypeMeta = metav1.TypeMeta{
 					APIVersion: "certificates.k8s.io/v1beta1",
 					Kind:       "CertificateSigningRequest",
 				}
+				csReq.Status.Certificate = []byte("cert")
+				data, err = apiruntime.Encode(unstructured.UnstructuredJSONScheme, csReq)
 			} else {
+				csReq := obj.(*csrv1b1.CertificateSigningRequest)
 				csReq.TypeMeta = metav1.TypeMeta{
 					APIVersion: "certificates.k8s.io/v1",
 					Kind:       "CertificateSigningRequest",
 				}
+				csReq.Status.Certificate = []byte("cert")
+				data, err = apiruntime.Encode(unstructured.UnstructuredJSONScheme, csReq)
 			}
-			csReq.Status.Certificate = []byte("cert")
-			data, err = apiruntime.Encode(unstructured.UnstructuredJSONScheme, csReq)
+
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
