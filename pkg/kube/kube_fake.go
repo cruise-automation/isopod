@@ -48,6 +48,8 @@ import (
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
+	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1b1 "k8s.io/api/batch/v1beta1"
 	csr "k8s.io/api/certificates/v1"
@@ -353,6 +355,18 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 		},
 		{
 			GroupVersion: autoscalingv1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "horizontalpodautoscalers", Kind: "HorizontalPodAutoscaler"},
+			},
+		},
+		{
+			GroupVersion: autoscalingv2beta1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "horizontalpodautoscalers", Kind: "HorizontalPodAutoscaler"},
+			},
+		},
+		{
+			GroupVersion: autoscalingv2beta2.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "horizontalpodautoscalers", Kind: "HorizontalPodAutoscaler"},
 			},
