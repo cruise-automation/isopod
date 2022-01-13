@@ -438,6 +438,7 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 			GroupVersion: istiosecurityv1beta1.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "authorizationpolicy", Namespaced: true, Kind: "AuthorizationPolicy"},
+				{Name: "peerauthentication", Namespaced: true, Kind: "PeerAuthentication"},
 			},
 		},
 		{
