@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 )
@@ -18,6 +18,7 @@ import (
 type Request struct {
 	Method        string
 	URL           *url.URL
+	Host          string
 	Params        url.Values
 	Headers       http.Header
 	ClientToken   string
@@ -115,7 +116,7 @@ func (r *Request) toRetryableHTTP() (*retryablehttp.Request, error) {
 	req.URL.User = r.URL.User
 	req.URL.Scheme = r.URL.Scheme
 	req.URL.Host = r.URL.Host
-	req.Host = r.URL.Host
+	req.Host = r.Host
 
 	if r.Headers != nil {
 		for header, vals := range r.Headers {
