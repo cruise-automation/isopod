@@ -60,6 +60,7 @@ import (
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1beta1 "k8s.io/api/scheduling/v1beta1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -68,6 +69,7 @@ import (
 	vpav1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	vpav1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	apiregistrationv1b1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
+	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 
 	isopod "github.com/cruise-automation/isopod/pkg"
 )
@@ -345,6 +347,7 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 			GroupVersion: networkingv1.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "networkpolicies", Namespaced: true, Kind: "NetworkPolicy"},
+				{Name: "ingresses", Namespaced: true, Kind: "Ingress"},
 			},
 		},
 		{
@@ -474,7 +477,19 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 			},
 		},
 		{
+			GroupVersion: schedulingv1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "priorityclass", Kind: "PriorityClass"},
+			},
+		},
+		{
 			GroupVersion: apiregistrationv1b1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "apiservice", Kind: "APIService"},
+			},
+		},
+		{
+			GroupVersion: apiregistrationv1.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "apiservice", Kind: "APIService"},
 			},
