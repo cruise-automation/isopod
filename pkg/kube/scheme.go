@@ -40,6 +40,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	schedulingv1alpha1 "k8s.io/api/scheduling/v1alpha1"
 	schedulingv1beta1 "k8s.io/api/scheduling/v1beta1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -58,6 +59,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 
 	// Import serializer extensions.
@@ -99,12 +101,14 @@ var (
 		rbacsyncv1alpha.AddToScheme,
 		schedulingv1alpha1.AddToScheme,
 		schedulingv1beta1.AddToScheme,
+		schedulingv1.AddToScheme,
 		storagev1beta1.AddToScheme,
 		storagev1.AddToScheme,
 		storagev1alpha1.AddToScheme,
 		vpav1beta2.AddToScheme,
 		vpav1.AddToScheme,
 		apiregistrationv1beta1.AddToScheme,
+		apiregistrationv1.AddToScheme,
 		istionetworkingv1alpha3.AddToScheme,
 		istionetworkingv1beta1.AddToScheme,
 		istiosecurityv1beta1.AddToScheme,

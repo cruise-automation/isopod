@@ -808,6 +808,7 @@ k8s.io/klog/v2
 # k8s.io/kube-aggregator v0.0.0-20191015220746-1fa97e0b871d
 ## explicit
 k8s.io/kube-aggregator/pkg/apis/apiregistration
+k8s.io/kube-aggregator/pkg/apis/apiregistration/v1
 k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1
 # k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e
 k8s.io/kube-openapi/pkg/util/proto
