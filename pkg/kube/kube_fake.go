@@ -38,26 +38,37 @@ import (
 
 	rbacsyncv1alpha "github.com/cruise-automation/rbacsync/pkg/apis/rbacsync/v1alpha"
 	arkv1 "github.com/heptio/ark/pkg/apis/ark/v1"
+	istio "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	istiosecurityv1beta1 "istio.io/client-go/pkg/apis/security/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1b1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
+	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1b1 "k8s.io/api/batch/v1beta1"
-	csr "k8s.io/api/certificates/v1beta1"
+	csr "k8s.io/api/certificates/v1"
+	csrv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	schedulingv1beta1 "k8s.io/api/scheduling/v1beta1"
 	storagev1 "k8s.io/api/storage/v1"
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	vpav1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	vpav1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	apiregistrationv1b1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 
 	isopod "github.com/cruise-automation/isopod/pkg"
@@ -140,15 +151,26 @@ func (h *fakeKube) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			csReq, ok := obj.(*csr.CertificateSigningRequest)
 			if !ok {
-				http.Error(w, "obj is not a *csr.CertificateSigningRequest", http.StatusBadRequest)
-				return
+				csReq, okV1b1 := obj.(*csrv1b1.CertificateSigningRequest)
+				if !okV1b1 {
+					http.Error(w, "obj is not a *csr.CertificateSigningRequest", http.StatusBadRequest)
+					return
+				}
+				csReq.TypeMeta = metav1.TypeMeta{
+					APIVersion: "certificates.k8s.io/v1beta1",
+					Kind:       "CertificateSigningRequest",
+				}
+				csReq.Status.Certificate = []byte("cert")
+				data, err = apiruntime.Encode(unstructured.UnstructuredJSONScheme, csReq)
+			} else {
+				csReq.TypeMeta = metav1.TypeMeta{
+					APIVersion: "certificates.k8s.io/v1",
+					Kind:       "CertificateSigningRequest",
+				}
+				csReq.Status.Certificate = []byte("cert")
+				data, err = apiruntime.Encode(unstructured.UnstructuredJSONScheme, csReq)
 			}
-			csReq.Status.Certificate = []byte("cert")
-			csReq.TypeMeta = metav1.TypeMeta{
-				APIVersion: "certificates.k8s.io/v1beta1",
-				Kind:       "CertificateSigningRequest",
-			}
-			data, err = apiruntime.Encode(unstructured.UnstructuredJSONScheme, csReq)
+
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
@@ -325,6 +347,7 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 			GroupVersion: networkingv1.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "networkpolicies", Namespaced: true, Kind: "NetworkPolicy"},
+				{Name: "ingresses", Namespaced: true, Kind: "Ingress"},
 			},
 		},
 		{
@@ -335,6 +358,18 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 		},
 		{
 			GroupVersion: autoscalingv1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "horizontalpodautoscalers", Kind: "HorizontalPodAutoscaler"},
+			},
+		},
+		{
+			GroupVersion: autoscalingv2beta1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "horizontalpodautoscalers", Kind: "HorizontalPodAutoscaler"},
+			},
+		},
+		{
+			GroupVersion: autoscalingv2beta2.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "horizontalpodautoscalers", Kind: "HorizontalPodAutoscaler"},
 			},
@@ -381,9 +416,51 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 			},
 		},
 		{
+			GroupVersion: istio.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "sidecar", Namespaced: true, Kind: "Sidecar"},
+				{Name: "virtualservice", Namespaced: true, Kind: "VirtualService"},
+				{Name: "destinationrule", Namespaced: true, Kind: "DestinationRule"},
+				{Name: "gateway", Namespaced: true, Kind: "Gateway"},
+				{Name: "serviceentry", Kind: "ServiceEntry"},
+				{Name: "envoyfilter", Namespaced: true, Kind: "EnvoyFilter"},
+			},
+		},
+		{
+			GroupVersion: istiov1b1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "sidecar", Namespaced: true, Kind: "Sidecar"},
+				{Name: "virtualservice", Namespaced: true, Kind: "VirtualService"},
+				{Name: "destinationrule", Namespaced: true, Kind: "DestinationRule"},
+				{Name: "gateway", Namespaced: true, Kind: "Gateway"},
+				{Name: "serviceentry", Kind: "ServiceEntry"},
+				{Name: "envoyfilter", Namespaced: true, Kind: "EnvoyFilter"},
+			},
+		},
+		{
+			GroupVersion: istiosecurityv1beta1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "authorizationpolicy", Namespaced: true, Kind: "AuthorizationPolicy"},
+				{Name: "peerauthentication", Namespaced: true, Kind: "PeerAuthentication"},
+			},
+		},
+		{
 			GroupVersion: csr.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "certificatesigningrequests", Kind: "CertificateSigningRequest"},
+			},
+		},
+		{
+			GroupVersion: csrv1b1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "certificatesigningrequests", Kind: "CertificateSigningRequest"},
+			},
+		},
+		{
+			GroupVersion: admissionregistrationv1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "validatingwebhookconfigurations", Kind: "ValidatingWebhookConfiguration"},
+				{Name: "mutatingwebhookconfigurations", Kind: "MutatingWebhookConfiguration"},
 			},
 		},
 		{
@@ -400,9 +477,33 @@ func fakeDiscovery() discovery.DiscoveryInterface {
 			},
 		},
 		{
+			GroupVersion: schedulingv1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "priorityclass", Kind: "PriorityClass"},
+			},
+		},
+		{
 			GroupVersion: apiregistrationv1b1.SchemeGroupVersion.String(),
 			APIResources: []metav1.APIResource{
 				{Name: "apiservice", Kind: "APIService"},
+			},
+		},
+		{
+			GroupVersion: apiregistrationv1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "apiservice", Kind: "APIService"},
+			},
+		},
+		{
+			GroupVersion: vpav1.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "verticalpodautoscalers", Kind: "VerticalPodAutoscaler"},
+			},
+		},
+		{
+			GroupVersion: vpav1beta2.SchemeGroupVersion.String(),
+			APIResources: []metav1.APIResource{
+				{Name: "verticalpodautoscalers", Kind: "VerticalPodAutoscaler"},
 			},
 		},
 	}

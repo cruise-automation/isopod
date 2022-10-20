@@ -17,6 +17,7 @@
 package v1beta1
 
 import (
+	v1alpha1 "istio.io/api/meta/v1alpha1"
 	securityv1beta1 "istio.io/api/security/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -62,6 +63,7 @@ import (
 // +cue-gen:AuthorizationPolicy:subresource:status
 // +cue-gen:AuthorizationPolicy:scope:Namespaced
 // +cue-gen:AuthorizationPolicy:resource:categories=istio-io,security-istio-io,plural=authorizationpolicies
+// +cue-gen:AuthorizationPolicy:preserveUnknownFields:false
 // -->
 //
 // <!-- go code generation tags
@@ -78,6 +80,8 @@ type AuthorizationPolicy struct {
 	// Spec defines the implementation of this definition.
 	// +optional
 	Spec securityv1beta1.AuthorizationPolicy `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+
+	Status v1alpha1.IstioStatus `json:"status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -180,6 +184,12 @@ type AuthorizationPolicyList struct {
 // +cue-gen:PeerAuthentication:subresource:status
 // +cue-gen:PeerAuthentication:scope:Namespaced
 // +cue-gen:PeerAuthentication:resource:categories=istio-io,security-istio-io,shortNames=pa
+// +cue-gen:PeerAuthentication:preserveUnknownFields:false
+// +cue-gen:PeerAuthentication:printerColumn:name=Mode,type=string,JSONPath=.spec.mtls.mode,description="Defines the mTLS mode used for peer authentication."
+// +cue-gen:PeerAuthentication:printerColumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp,description="CreationTimestamp is a timestamp
+// representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations.
+// Clients may not set this value. It is represented in RFC3339 form and is in UTC.
+// Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
 // -->
 //
 // <!-- go code generation tags
@@ -196,6 +206,8 @@ type PeerAuthentication struct {
 	// Spec defines the implementation of this definition.
 	// +optional
 	Spec securityv1beta1.PeerAuthentication `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+
+	Status v1alpha1.IstioStatus `json:"status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -212,7 +224,7 @@ type PeerAuthenticationList struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // RequestAuthentication defines what request authentication methods are supported by a workload.
-// If will reject a request if the request contains invalid authentication information, based on the
+// It will reject a request if the request contains invalid authentication information, based on the
 // configured authentication rules. A request that does not contain any authentication credentials
 // will be accepted but will not have any authenticated identity. To restrict access to authenticated
 // requests only, this should be accompanied by an authorization rule.
@@ -250,7 +262,7 @@ type PeerAuthenticationList struct {
 // ```
 //
 // - The next example shows how to set a different JWT requirement for a different `host`. The `RequestAuthentication`
-// declares it can accpet JWTs issuer by either `issuer-foo` or `issuer-bar` (the public key set is implicitly
+// declares it can accept JWTs issued by either `issuer-foo` or `issuer-bar` (the public key set is implicitly
 // set from the OpenID Connect spec).
 //
 // ```yaml
@@ -309,7 +321,7 @@ type PeerAuthenticationList struct {
 //        requestPrincipals: ["*"]
 //  - to:
 //    - operation:
-//        paths: ["/healthz]
+//        paths: ["/healthz"]
 // ```
 //
 // <!-- crd generation tags
@@ -321,6 +333,7 @@ type PeerAuthenticationList struct {
 // +cue-gen:RequestAuthentication:subresource:status
 // +cue-gen:RequestAuthentication:scope:Namespaced
 // +cue-gen:RequestAuthentication:resource:categories=istio-io,security-istio-io,shortNames=ra
+// +cue-gen:RequestAuthentication:preserveUnknownFields:false
 // -->
 //
 // <!-- go code generation tags
@@ -337,6 +350,8 @@ type RequestAuthentication struct {
 	// Spec defines the implementation of this definition.
 	// +optional
 	Spec securityv1beta1.RequestAuthentication `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+
+	Status v1alpha1.IstioStatus `json:"status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -3,7 +3,7 @@
 
 // `WorkloadEntry` enables operators to describe the properties of a
 // single non-Kubernetes workload such as a VM or a bare metal server
-// as it is are onboarded into the mesh. A `WorkloadEntry` must be
+// as it is onboarded into the mesh. A `WorkloadEntry` must be
 // accompanied by an Istio `ServiceEntry` that selects the workload
 // through the appropriate labels and provides the service definition
 // for a `MESH_INTERNAL` service (hostnames, port properties, etc.). A
@@ -16,12 +16,13 @@
 // workload along with other details, similar to how Kubernetes
 // updates the status of a pod.
 //
-// The following example declares a workload entry representing a
-// VM for the `details.bookinfo.com` service. This VM has
-// sidecar installed and bootstrapped using the `details-legacy`
-// service account. The sidecar receives HTTP traffic on port 80
-// (wrapped in istio mutual TLS) and forwards it to the application on
-// the localhost on the same port.
+// The following example declares a workload entry representing a VM
+// for the `details.bookinfo.com` service. This VM has sidecar
+// installed and bootstrapped using the `details-legacy` service
+// account. The service is exposed on port 80 to applications in the
+// mesh. The HTTP traffic to this service is wrapped in Istio mutual
+// TLS and sent to sidecars on VMs on target port 8080, that in turn
+// forward it to the application on localhost on the same port.
 //
 // {{<tabset category-name="example">}}
 // {{<tab name="v1alpha3" category-value="v1alpha3">}}
@@ -40,7 +41,6 @@
 //   labels:
 //     app: details-legacy
 //     instance-id: vm1
-//   # ports if not specified will be the same as service ports
 // ```
 // {{</tab>}}
 //
@@ -60,7 +60,6 @@
 //   labels:
 //     app: details-legacy
 //     instance-id: vm1
-//   # ports if not specified will be the same as service ports
 // ```
 // {{</tab>}}
 // {{</tabset>}}
@@ -82,6 +81,7 @@
 //   - number: 80
 //     name: http
 //     protocol: HTTP
+//     targetPort: 8080
 //   resolution: STATIC
 //   workloadSelector:
 //     labels:
@@ -103,6 +103,7 @@
 //   - number: 80
 //     name: http
 //     protocol: HTTP
+//     targetPort: 8080
 //   resolution: STATIC
 //   workloadSelector:
 //     labels:
@@ -135,7 +136,6 @@
 //   labels:
 //     app: details-legacy
 //     instance-id: vm1
-//   # ports if not specified will be the same as service ports
 // ```
 // {{</tab>}}
 //
@@ -155,7 +155,6 @@
 //   labels:
 //     app: details-legacy
 //     instance-id: vm1
-//   # ports if not specified will be the same as service ports
 // ```
 // {{</tab>}}
 // {{</tabset>}}
@@ -177,6 +176,7 @@
 //   - number: 80
 //     name: http
 //     protocol: HTTP
+//     targetPort: 8080
 //   resolution: DNS
 //   workloadSelector:
 //     labels:
@@ -198,6 +198,7 @@
 //   - number: 80
 //     name: http
 //     protocol: HTTP
+//     targetPort: 8080
 //   resolution: DNS
 //   workloadSelector:
 //     labels:
@@ -245,6 +246,7 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 // Clients may not set this value. It is represented in RFC3339 form and is in UTC.
 // Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
 // +cue-gen:WorkloadEntry:printerColumn:name=Address,type=string,JSONPath=.spec.address,description="Address associated with the network endpoint."
+// +cue-gen:WorkloadEntry:preserveUnknownFields:false
 // -->
 //
 // <!-- go code generation tags
@@ -259,9 +261,20 @@ type WorkloadEntry struct {
 	// to DNS, and must be fully-qualified without wildcards. Use the form
 	// unix:///absolute/path/to/socket for Unix domain socket endpoints.
 	Address string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
-	// Set of ports associated with the endpoint. The ports must be
-	// associated with a port name that was declared as part of the
-	// service. Do not use for `unix://` addresses.
+	// Set of ports associated with the endpoint. If the port map is
+	// specified, it must be a map of servicePortName to this endpoint's
+	// port, such that traffic to the service port will be forwarded to
+	// the endpoint port that maps to the service's portName. If
+	// omitted, and the targetPort is specified as part of the service's
+	// port specification, traffic to the service port will be forwarded
+	// to one of the endpoints on the specified `targetPort`. If both
+	// the targetPort and endpoint's port map are not specified, traffic
+	// to a service port will be forwarded to one of the endpoints on
+	// the same port.
+	//
+	// **NOTE 1:** Do not use for `unix://` addresses.
+	//
+	// **NOTE 2:** endpoint port map takes precedence over targetPort.
 	Ports map[string]uint32 `protobuf:"bytes,2,rep,name=ports,proto3" json:"ports,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
 	// One or more labels associated with the endpoint.
 	Labels map[string]string `protobuf:"bytes,3,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
@@ -746,7 +759,7 @@ func (m *WorkloadEntry) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthWorkloadEntry
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -873,7 +886,7 @@ func (m *WorkloadEntry) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthWorkloadEntry
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -1005,10 +1018,7 @@ func (m *WorkloadEntry) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthWorkloadEntry
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthWorkloadEntry
 			}
 			if (iNdEx + skippy) > l {
@@ -1027,6 +1037,7 @@ func (m *WorkloadEntry) Unmarshal(dAtA []byte) error {
 func skipWorkloadEntry(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
+	depth := 0
 	for iNdEx < l {
 		var wire uint64
 		for shift := uint(0); ; shift += 7 {
@@ -1058,10 +1069,8 @@ func skipWorkloadEntry(dAtA []byte) (n int, err error) {
 					break
 				}
 			}
-			return iNdEx, nil
 		case 1:
 			iNdEx += 8
-			return iNdEx, nil
 		case 2:
 			var length int
 			for shift := uint(0); ; shift += 7 {
@@ -1082,55 +1091,30 @@ func skipWorkloadEntry(dAtA []byte) (n int, err error) {
 				return 0, ErrInvalidLengthWorkloadEntry
 			}
 			iNdEx += length
-			if iNdEx < 0 {
-				return 0, ErrInvalidLengthWorkloadEntry
-			}
-			return iNdEx, nil
 		case 3:
-			for {
-				var innerWire uint64
-				var start int = iNdEx
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return 0, ErrIntOverflowWorkloadEntry
-					}
-					if iNdEx >= l {
-						return 0, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					innerWire |= (uint64(b) & 0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				innerWireType := int(innerWire & 0x7)
-				if innerWireType == 4 {
-					break
-				}
-				next, err := skipWorkloadEntry(dAtA[start:])
-				if err != nil {
-					return 0, err
-				}
-				iNdEx = start + next
-				if iNdEx < 0 {
-					return 0, ErrInvalidLengthWorkloadEntry
-				}
-			}
-			return iNdEx, nil
+			depth++
 		case 4:
-			return iNdEx, nil
+			if depth == 0 {
+				return 0, ErrUnexpectedEndOfGroupWorkloadEntry
+			}
+			depth--
 		case 5:
 			iNdEx += 4
-			return iNdEx, nil
 		default:
 			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
 		}
+		if iNdEx < 0 {
+			return 0, ErrInvalidLengthWorkloadEntry
+		}
+		if depth == 0 {
+			return iNdEx, nil
+		}
 	}
-	panic("unreachable")
+	return 0, io.ErrUnexpectedEOF
 }
 
 var (
-	ErrInvalidLengthWorkloadEntry = fmt.Errorf("proto: negative length found during unmarshaling")
-	ErrIntOverflowWorkloadEntry   = fmt.Errorf("proto: integer overflow")
+	ErrInvalidLengthWorkloadEntry        = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowWorkloadEntry          = fmt.Errorf("proto: integer overflow")
+	ErrUnexpectedEndOfGroupWorkloadEntry = fmt.Errorf("proto: unexpected end of group")
 )

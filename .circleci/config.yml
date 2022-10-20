@@ -2,14 +2,14 @@ version: 2
 
 golang-docker-base-image: &golang-docker-base-image
   docker:
-    - image: cimg/go:1.14
+    - image: cimg/go:1.17
       environment:
         GO111MODULE: "on"
         CGO_ENABLED: 0
 
 linter-image: &linter-image
   docker:
-    - image: golangci/golangci-lint:v1.23.8
+    - image: golangci/golangci-lint:v1.42.0
 
 jobs:
   build:
