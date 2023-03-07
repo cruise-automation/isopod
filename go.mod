@@ -39,7 +39,7 @@ require (
 	github.com/stripe/skycfg v0.1.0
 	github.com/tj/go-spin v1.1.0
 	go.starlark.net v0.0.0-20190808202859-1a17001102fe
-	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a // indirect
+	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	google.golang.org/api v0.29.0
 	google.golang.org/protobuf v1.27.1 // indirect
