@@ -17,7 +17,7 @@ github.com/cenkalti/backoff/v3
 ## explicit
 github.com/cruise-automation/rbacsync/pkg/apis/rbacsync
 github.com/cruise-automation/rbacsync/pkg/apis/rbacsync/v1alpha
-# github.com/cyphar/filepath-securejoin v0.2.2
+# github.com/cyphar/filepath-securejoin v0.2.4
 ## explicit
 github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.1
