@@ -146,7 +146,7 @@ and `ctx.location` to get `"us-west1"`. Accessing nonexistant attribute `ctx.foo
 
 Each addon is represented using the `addon()` Starlark built-in, which takes
 three arguments, for example `addon("name", "entry_file.ipd", ctx)`. The first
-argument is the addon name, used by the `--match_addon` feature. The thrid
+argument is the addon name, used by the `--match_addon` feature. The third
 is optional and represents the `ctx` input to `addons(ctx)` to make the cluster
 attributes available to the addon. Each addon must implement `install(ctx)` and
 `remove(ctx)` functions.
